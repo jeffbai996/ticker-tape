@@ -7,6 +7,8 @@ import sys
 import termios
 import time
 import tty
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from config import (
     NAMES, THESIS_BUCKETS,
@@ -208,8 +210,18 @@ def display_lookup(info: dict, symbol: str) -> None:
     pct = (change / prev * 100) if prev else 0
     name = info.get("shortName", symbol)
 
+    # Last updated timestamp from market data
+    mkt_time = info.get("regularMarketTime")
+    if mkt_time:
+        et = ZoneInfo("America/New_York")
+        dt = datetime.fromtimestamp(mkt_time, tz=et)
+        updated_str = f"  {DIM}Last updated: {dt.strftime('%b %d %H:%M ET')}{RESET}"
+    else:
+        updated_str = f"  {DIM}Last updated: unknown{RESET}"
+
     print(f"\n  {BOLD}{YELLOW}{symbol}{RESET}  {DIM}{name}{RESET}")
     print(f"  {BOLD}{WHITE}{price:.2f}{RESET}  {_color_val(change, pct)}")
+    print(updated_str)
 
     # Extended hours
     pre = info.get("preMarketPrice")
