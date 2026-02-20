@@ -1,0 +1,14 @@
+venv/
+bin/
+lib/
+include/
+pyvenv.cfg
+__pycache__/
+*.pyc
+.env
+*.db
+.DS_Store
+.pytest_cache/
+data/
+.locale
+.compact_mode
