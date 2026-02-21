@@ -481,12 +481,65 @@ def display_sectors(sector_data: list[dict]) -> None:
     print()
 
 
+def auto_refresh_tape(fetch_fn, interval: int = 15) -> list[dict]:
+    """Auto-refreshing static tape. Returns final quotes on exit."""
+    try:
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+    except (termios.error, ValueError, AttributeError):
+        # No raw mode — do a single static refresh and return
+        quotes, timestamp = fetch_fn()
+        print(f"\n  {BOLD}{YELLOW}═══ TICKER TAPE ═══{RESET}")
+        print(f"  {DIM}{timestamp}{RESET}\n")
+        _static_tape(quotes)
+        return quotes
+
+    tty.setcbreak(fd)
+    sys.stdout.write("\033[?25l")  # hide cursor
+
+    stop = [False]
+    prev_handler = signal.signal(signal.SIGINT, lambda s, f: stop.__setitem__(0, True))
+    quotes = []
+
+    try:
+        while not stop[0]:
+            # Fetch and render
+            sys.stdout.write("\033[2J\033[H")  # clear screen, cursor to top
+            print(f"  {BOLD}{YELLOW}═══ TICKER TAPE ═══{RESET}  {DIM}(auto-refresh {interval}s │ any key to stop){RESET}")
+            print(f"  {DIM}Fetching...{RESET}", end="", flush=True)
+            quotes, timestamp = fetch_fn()
+            sys.stdout.write(f"\r\033[2K")
+            print(f"  {DIM}{timestamp}{RESET}\n")
+            _static_tape(quotes)
+
+            # Wait for interval, checking for keypress every 0.1s
+            elapsed = 0.0
+            while elapsed < interval and not stop[0]:
+                if select.select([sys.stdin], [], [], 0.1)[0]:
+                    sys.stdin.read(1)
+                    stop[0] = True
+                    break
+                elapsed += 0.1
+                remaining = max(0, int(interval - elapsed))
+                sys.stdout.write(f"\r  {DIM}Next refresh in {remaining}s...{RESET}\033[K")
+                sys.stdout.flush()
+    finally:
+        sys.stdout.write("\033[?25h")  # show cursor
+        termios.tcflush(fd, termios.TCIFLUSH)
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        signal.signal(signal.SIGINT, prev_handler)
+        print(f"\n  {DIM}Auto-refresh stopped{RESET}\n")
+
+    return quotes
+
+
 def display_help() -> None:
     """Available commands."""
     print(f"\n  {BOLD}{YELLOW}═══ COMMANDS ═══{RESET}\n")
     cmds = [
         ("<ticker>", "Look up detailed stock metrics"),
         ("r, refresh", "Re-fetch and display ticker tape"),
+        ("auto, a", "Auto-refresh tape every 15s"),
         ("thesis, t", "Thesis bucket dashboard"),
         ("earnings, er", "Upcoming earnings dates"),
         ("market, m", "Macro market overview"),

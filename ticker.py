@@ -14,7 +14,7 @@ from data import (
 from views import (
     scrolling_tape, display_lookup, display_thesis, display_earnings,
     display_market, display_news, display_technicals, display_chart,
-    display_sectors, display_help,
+    display_sectors, display_help, auto_refresh_tape,
 )
 
 
@@ -41,6 +41,9 @@ def handle_command(cmd: str, quotes: list[dict]) -> list[dict] | None:
     parts = cmd.split(maxsplit=1)
     action = parts[0]
     arg = parts[1].strip().upper() if len(parts) > 1 else ""
+
+    if action in ("A", "AUTO"):
+        return auto_refresh_tape(lambda: fetch_quotes(get_all_symbols()))
 
     if action in ("R", "REFRESH"):
         return show_tape()
