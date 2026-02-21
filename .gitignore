@@ -4,4 +4,6 @@ __pycache__/
 .env
 *.db
 .DS_Store
+.pytest_cache/
 watchlist.json
+alerts.json
