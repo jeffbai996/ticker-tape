@@ -5,12 +5,11 @@ import sys
 import signal
 
 from config import CYAN, DIM, BOLD, RESET, GREEN, RED, YELLOW
-from config import NAMES
 from data import (
     get_all_symbols, fetch_quotes, fetch_stock_info, fetch_earnings,
     fetch_market_overview, fetch_news, fetch_technicals, fetch_chart_data,
     fetch_sector_performance, load_watchlist, add_to_watchlist, remove_from_watchlist,
-    fetch_comparison_data, fetch_intraday_data,
+    fetch_comparison_data, fetch_intraday_data, get_all_names,
 )
 from views import (
     scrolling_tape, display_lookup, display_thesis, display_earnings,
@@ -144,17 +143,19 @@ def handle_command(cmd: str, quotes: list[dict]) -> list[dict] | None:
         display_sectors(fetch_sector_performance())
         return None
 
-    if action == "WATCH":
+    if action in ("W", "WATCH"):
         if not arg:
             print(f"\n  {DIM}Usage: watch <SYMBOL>{RESET}\n")
-        elif add_to_watchlist(arg):
-            print(f"\n  {GREEN}Added {arg} to watchlist — refreshing tape...{RESET}")
-            return show_tape()
         else:
-            print(f"\n  {DIM}{arg} already tracked{RESET}\n")
+            print(f"\n  {DIM}Adding {arg}...{RESET}", end="", flush=True)
+            if add_to_watchlist(arg):
+                print(f"\r\033[2K\n  {GREEN}Added {arg} to watchlist — refreshing tape...{RESET}")
+                return show_tape()
+            else:
+                print(f"\r\033[2K\n  {DIM}{arg} already tracked{RESET}\n")
         return None
 
-    if action == "UNWATCH":
+    if action in ("UW", "UNWATCH"):
         if not arg:
             print(f"\n  {DIM}Usage: unwatch <SYMBOL>{RESET}\n")
         elif remove_from_watchlist(arg):
@@ -196,9 +197,10 @@ def check_upcoming_earnings() -> None:
     if not upcoming:
         return
     upcoming.sort(key=lambda x: x["days_until"])
+    names = get_all_names()
     print(f"  {RED}{BOLD}⚠ EARNINGS ALERT{RESET}")
     for e in upcoming:
-        name = NAMES.get(e["symbol"], e["symbol"])
+        name = names.get(e["symbol"], e["symbol"])
         if e["days_until"] == 0:
             when = f"{RED}{BOLD}TODAY{RESET}"
         elif e["days_until"] == 1:

@@ -11,9 +11,10 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from config import (
-    NAMES, THESIS_BUCKETS,
+    THESIS_BUCKETS,
     GREEN, RED, YELLOW, CYAN, WHITE, DIM, BOLD, RESET, MAGENTA,
 )
+from data import get_all_names
 
 
 # ── Formatters ──────────────────────────────────────────────
@@ -80,6 +81,50 @@ def _sparkline(prices: list[float], width: int = 40) -> str:
     # Color based on start vs end
     color = GREEN if sampled[-1] >= sampled[0] else RED
     return f"{color}{line}{RESET}"
+
+
+def _tall_chart(prices: list[float], width: int = 60, height: int = 8,
+                color: str | None = None) -> list[str]:
+    """Multi-row sparkline chart. Returns list of strings (top to bottom)."""
+    if not prices or len(prices) < 2:
+        return []
+    lo, hi = min(prices), max(prices)
+    spread = hi - lo if hi != lo else 1
+
+    # Resample to fit width
+    if len(prices) > width:
+        step = len(prices) / width
+        sampled = [prices[int(i * step)] for i in range(width)]
+    else:
+        sampled = prices
+        width = len(sampled)
+
+    # Map each price to a row (0=bottom, height-1=top)
+    rows = [int(((p - lo) / spread) * (height - 1)) for p in sampled]
+
+    if color is None:
+        color = GREEN if sampled[-1] >= sampled[0] else RED
+
+    # Build rows top to bottom
+    blocks = " ▁▂▃▄▅▆▇█"
+    lines = []
+    for row_idx in range(height - 1, -1, -1):
+        line = ""
+        for col in range(width):
+            if rows[col] == row_idx:
+                # Price is at this row — draw a block
+                # Use fractional position within the row for finer resolution
+                frac = ((sampled[col] - lo) / spread) * (height - 1) - row_idx
+                block_idx = max(1, int(frac * (len(blocks) - 1)))
+                line += blocks[block_idx]
+            elif rows[col] > row_idx:
+                # Price is above this row — filled
+                line += "█"
+            else:
+                # Price is below this row — empty
+                line += " "
+        lines.append(f"{color}{line}{RESET}")
+    return lines
 
 
 def _rsi_color(rsi: float) -> str:
@@ -181,10 +226,11 @@ def scrolling_tape(quotes: list[dict], timestamp: str) -> None:
 
 def _static_tape(quotes: list[dict]) -> None:
     """Fallback static display when raw mode is unavailable."""
+    names = get_all_names()
     for q in quotes:
         color = GREEN if q["change"] >= 0 else RED
         arrow = "▲" if q["change"] >= 0 else "▼"
-        name = NAMES.get(q["symbol"], q["symbol"])
+        name = names.get(q["symbol"], q["symbol"])
         ext = ""
         if "ext_price" in q:
             ext_c = GREEN if q["ext_change"] >= 0 else RED
@@ -286,6 +332,7 @@ def display_lookup(info: dict, symbol: str) -> None:
 
 def display_thesis(quotes: list[dict]) -> None:
     """Holdings grouped by thesis bucket."""
+    names = get_all_names()
     print(f"\n  {BOLD}{YELLOW}═══ THESIS DASHBOARD ═══{RESET}\n")
     quote_map = {q["symbol"]: q for q in quotes}
 
@@ -298,7 +345,7 @@ def display_thesis(quotes: list[dict]) -> None:
         print(f"  {BOLD}{CYAN}{bucket}{RESET}  {avg_c}avg {avg:+.2f}%{RESET}")
         print(f"  {DIM}{'─' * 36}{RESET}")
         for q in bucket_q:
-            name = NAMES.get(q["symbol"], q["symbol"])
+            name = names.get(q["symbol"], q["symbol"])
             color = GREEN if q["change"] >= 0 else RED
             arrow = "▲" if q["change"] >= 0 else "▼"
             ext = ""
@@ -321,21 +368,29 @@ def display_thesis(quotes: list[dict]) -> None:
         print(f"  {BOLD}{CYAN}Watchlist{RESET}")
         print(f"  {DIM}{'─' * 36}{RESET}")
         for q in extras:
+            name = names.get(q["symbol"], q["symbol"])
             color = GREEN if q["change"] >= 0 else RED
             arrow = "▲" if q["change"] >= 0 else "▼"
+            ext = ""
+            if "ext_price" in q:
+                ext_c = GREEN if q["ext_change"] >= 0 else RED
+                ext = f"  {MAGENTA}{q['ext_label']}:{RESET}{ext_c}{q['ext_pct']:+.2f}%{RESET}"
             print(
                 f"  {BOLD}{YELLOW}{q['symbol']:<5}{RESET} "
+                f"{DIM}{name:<14}{RESET} "
                 f"{WHITE}{q['price']:>8.2f}{RESET}  "
                 f"{color}{arrow} {q['pct']:+.2f}%{RESET}"
+                f"{ext}"
             )
         print()
 
 
 def display_earnings(earnings_data: list[dict]) -> None:
     """Upcoming earnings dates sorted by soonest."""
+    names = get_all_names()
     print(f"\n  {BOLD}{YELLOW}═══ EARNINGS CALENDAR ═══{RESET}\n")
     for e in sorted(earnings_data, key=lambda x: x["days_until"] if x["days_until"] is not None else 9999):
-        name = NAMES.get(e["symbol"], e["symbol"])
+        name = names.get(e["symbol"], e["symbol"])
         d = e["days_until"]
         if d is not None and d <= 7:
             urg = RED + BOLD
@@ -380,10 +435,10 @@ def display_news(news_data: list[dict], symbol: str) -> None:
         print(f"  {DIM}No recent news found{RESET}\n")
         return
     for item in news_data:
-        age = f" {DIM}({item['age']}){RESET}" if item["age"] else ""
-        print(f"  {WHITE}{item['title']}{RESET}{age}")
-        print(f"  {DIM}{item['publisher']}{RESET}")
-        print()
+        age = f" · {item['age']}" if item["age"] else ""
+        print(f"  {WHITE}{item['title']}{RESET}")
+        print(f"  {DIM}{item['publisher']}{age}{RESET}")
+    print()
 
 
 def display_technicals(ta: dict, symbol: str) -> None:
@@ -439,7 +494,7 @@ def display_technicals(ta: dict, symbol: str) -> None:
 
 
 def display_chart(prices: list[float], symbol: str, period: str) -> None:
-    """ASCII sparkline chart."""
+    """ASCII area chart."""
     print(f"\n  {BOLD}{YELLOW}═══ CHART: {symbol} ({period}) ═══{RESET}\n")
     if not prices:
         print(f"  {DIM}No data available{RESET}\n")
@@ -449,15 +504,22 @@ def display_chart(prices: list[float], symbol: str, period: str) -> None:
         width = min(os.get_terminal_size().columns - 8, 60)
     except OSError:
         width = 60
-    spark = _sparkline(prices, width)
-    print(f"  {spark}")
 
     lo, hi = min(prices), max(prices)
     first, last = prices[0], prices[-1]
     total_chg = ((last - first) / first) * 100 if first else 0
     color = GREEN if total_chg >= 0 else RED
 
-    print(f"\n  {DIM}Low: {lo:.2f}  High: {hi:.2f}{RESET}")
+    lines = _tall_chart(prices, width, height=8)
+    # Add price axis labels on right edge
+    for i, line in enumerate(lines):
+        if i == 0:
+            print(f"  {line}  {DIM}{hi:.2f}{RESET}")
+        elif i == len(lines) - 1:
+            print(f"  {line}  {DIM}{lo:.2f}{RESET}")
+        else:
+            print(f"  {line}")
+
     print(f"  {DIM}Start: {first:.2f}  End: {last:.2f}{RESET}  {color}{total_chg:+.2f}%{RESET}")
     print()
 
@@ -539,7 +601,7 @@ def display_comparison(data: dict[str, list[float]], symbols: list[str], period:
 
 
 def display_intraday(data: dict, symbol: str) -> None:
-    """Intraday sparkline with VWAP."""
+    """Intraday chart with VWAP overlay."""
     print(f"\n  {BOLD}{YELLOW}═══ INTRADAY: {symbol} (5m) ═══{RESET}\n")
 
     try:
@@ -547,30 +609,60 @@ def display_intraday(data: dict, symbol: str) -> None:
     except OSError:
         width = 60
 
-    # Price sparkline
-    spark = _sparkline(data["prices"], width)
-    print(f"  {spark}")
-
-    # VWAP sparkline (dimmed)
+    height = 8
+    prices = data["prices"]
     vwap_prices = data["vwap"]
-    if vwap_prices and len(vwap_prices) >= 2:
-        # Use same scale as price for visual comparison
-        all_vals = data["prices"] + vwap_prices
-        lo, hi = min(all_vals), max(all_vals)
-        spread = hi - lo if hi != lo else 1
-        blocks = " ▁▂▃▄▅▆▇█"
 
-        if len(vwap_prices) > width:
-            step = len(vwap_prices) / width
-            sampled = [vwap_prices[int(i * step)] for i in range(width)]
+    # Use shared scale for price and VWAP
+    all_vals = prices + vwap_prices
+    lo, hi = min(all_vals), max(all_vals)
+    spread = hi - lo if hi != lo else 1
+
+    # Resample both to same width
+    def resample(vals: list[float]) -> list[float]:
+        if len(vals) > width:
+            step = len(vals) / width
+            return [vals[int(i * step)] for i in range(width)]
+        return vals
+
+    p_sampled = resample(prices)
+    v_sampled = resample(vwap_prices)
+    w = len(p_sampled)
+
+    # Map to rows (0=bottom, height-1=top)
+    def to_rows(vals):
+        return [int(((v - lo) / spread) * (height - 1)) for v in vals]
+
+    p_rows = to_rows(p_sampled)
+    v_rows = to_rows(v_sampled)
+
+    price_color = GREEN if p_sampled[-1] >= p_sampled[0] else RED
+
+    # Render: price as filled area, VWAP as line overlay
+    for row_idx in range(height - 1, -1, -1):
+        line = ""
+        for col in range(w):
+            is_vwap = v_rows[col] == row_idx
+            price_here = p_rows[col] >= row_idx
+
+            if is_vwap and price_here:
+                # VWAP on top of price fill — show VWAP color
+                line += f"{CYAN}━{RESET}"
+            elif is_vwap:
+                # VWAP line in empty space
+                line += f"{DIM}{CYAN}─{RESET}"
+            elif price_here:
+                line += f"{price_color}█{RESET}"
+            else:
+                line += " "
+
+        # Axis labels
+        if row_idx == height - 1:
+            print(f"  {line}  {DIM}{hi:.2f}{RESET}")
+        elif row_idx == 0:
+            print(f"  {line}  {DIM}{lo:.2f}{RESET}")
         else:
-            sampled = vwap_prices
-
-        vline = ""
-        for p in sampled:
-            idx = int(((p - lo) / spread) * (len(blocks) - 1))
-            vline += blocks[idx]
-        print(f"  {DIM}{CYAN}{vline}{RESET}  {DIM}VWAP{RESET}")
+            print(f"  {line}")
 
     # Stats
     current = data["current"]
@@ -579,8 +671,9 @@ def display_intraday(data: dict, symbol: str) -> None:
     vwap_color = GREEN if current >= vwap_val else RED
     vwap_pos = "above" if current >= vwap_val else "below"
 
-    print(f"\n  {WHITE}{current:.2f}{RESET}  {vwap_color}{vwap_dist:+.2f}% {vwap_pos} VWAP ({vwap_val:.2f}){RESET}")
+    print(f"  {WHITE}{current:.2f}{RESET}  {vwap_color}{vwap_dist:+.2f}% {vwap_pos} VWAP ({vwap_val:.2f}){RESET}")
     print(f"  {DIM}Range: {data['low']:.2f} — {data['high']:.2f}  │  Vol: {data['volume']:,}{RESET}")
+    print(f"  {DIM}{price_color}█{RESET}{DIM} Price  {CYAN}─{RESET}{DIM} VWAP{RESET}")
     print()
 
 
@@ -652,8 +745,8 @@ def display_help() -> None:
         ("intra, i <SYM>", "Intraday chart with VWAP"),
         ("chart, c <SYM>", "ASCII sparkline price chart"),
         ("sectors, s", "Sector performance heatmap"),
-        ("watch <SYM>", "Add symbol to watchlist"),
-        ("unwatch <SYM>", "Remove from watchlist"),
+        ("watch, w <SYM>", "Add symbol to watchlist"),
+        ("unwatch, uw <SYM>", "Remove from watchlist"),
         ("watchlist, wl", "Show watchlist"),
         ("help, h, ?", "Show this help"),
         ("q, quit, exit", "Exit"),

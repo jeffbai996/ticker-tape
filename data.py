@@ -393,42 +393,66 @@ def fetch_intraday_data(symbol: str) -> dict | None:
         return None
 
 
-def load_watchlist() -> list[str]:
-    """Load watchlist from disk."""
+def _load_watchlist_data() -> dict:
+    """Load raw watchlist JSON."""
     if not os.path.exists(WATCHLIST_FILE):
-        return []
+        return {"symbols": [], "names": {}}
     try:
         with open(WATCHLIST_FILE) as f:
-            return json.load(f).get("symbols", [])
+            data = json.load(f)
+            # Migrate old format (just symbols list) to new format
+            if "names" not in data:
+                data["names"] = {}
+            return data
     except Exception:
-        return []
+        return {"symbols": [], "names": {}}
 
 
-def save_watchlist(symbols: list[str]) -> None:
-    """Save watchlist to disk."""
+def _save_watchlist_data(data: dict) -> None:
+    """Save raw watchlist JSON."""
+    data["symbols"] = sorted(set(data["symbols"]))
     with open(WATCHLIST_FILE, "w") as f:
-        json.dump({"symbols": sorted(set(symbols))}, f, indent=2)
+        json.dump(data, f, indent=2)
+
+
+def load_watchlist() -> list[str]:
+    """Load watchlist symbols from disk."""
+    return _load_watchlist_data().get("symbols", [])
+
+
+def get_all_names() -> dict[str, str]:
+    """Merged name map: portfolio NAMES + watchlist names."""
+    wl_data = _load_watchlist_data()
+    return {**NAMES, **wl_data.get("names", {})}
 
 
 def add_to_watchlist(symbol: str) -> bool:
-    """Add symbol. Returns False if already tracked (portfolio or watchlist)."""
+    """Add symbol with name lookup. Returns False if already tracked."""
     sym = symbol.upper()
     if sym in SYMBOLS:
         return False
-    wl = load_watchlist()
-    if sym in wl:
+    data = _load_watchlist_data()
+    if sym in data["symbols"]:
         return False
-    wl.append(sym)
-    save_watchlist(wl)
+    data["symbols"].append(sym)
+    # Fetch display name from yfinance
+    try:
+        info = yf.Ticker(sym).info
+        name = info.get("shortName", sym)
+        data["names"][sym] = name
+    except Exception:
+        data["names"][sym] = sym
+    _save_watchlist_data(data)
     return True
 
 
 def remove_from_watchlist(symbol: str) -> bool:
     """Remove symbol. Returns False if not on watchlist."""
-    wl = load_watchlist()
+    data = _load_watchlist_data()
     sym = symbol.upper()
-    if sym not in wl:
+    if sym not in data["symbols"]:
         return False
-    wl.remove(sym)
-    save_watchlist(wl)
+    data["symbols"].remove(sym)
+    data["names"].pop(sym, None)
+    _save_watchlist_data(data)
     return True
