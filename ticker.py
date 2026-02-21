@@ -10,12 +10,16 @@ from data import (
     fetch_market_overview, fetch_news, fetch_technicals, fetch_chart_data,
     fetch_sector_performance, load_watchlist, add_to_watchlist, remove_from_watchlist,
     fetch_comparison_data, fetch_intraday_data, get_all_names,
+    fetch_earnings_impact, fetch_batch_info,
+    load_alerts, add_alert, remove_alert, evaluate_alerts,
 )
 from views import (
     scrolling_tape, display_lookup, display_thesis, display_earnings,
     display_market, display_news, display_technicals, display_chart,
     display_sectors, display_help, auto_refresh_tape,
     display_comparison, display_intraday,
+    display_earnings_impact, display_screen,
+    display_alerts, display_triggered_alerts,
 )
 
 
@@ -168,9 +172,95 @@ def handle_command(cmd: str, quotes: list[dict]) -> list[dict] | None:
     if action in ("WL", "WATCHLIST"):
         wl = load_watchlist()
         if wl:
-            print(f"\n  {BOLD}{YELLOW}Watchlist:{RESET} {', '.join(wl)}\n")
+            names = get_all_names()
+            print(f"\n  {BOLD}{YELLOW}═══ WATCHLIST ═══{RESET}\n")
+            for sym in wl:
+                name = names.get(sym, sym)
+                print(f"  {BOLD}{YELLOW}{sym:<6}{RESET} {DIM}{name}{RESET}")
+            print()
         else:
             print(f"\n  {DIM}Watchlist empty. Use 'watch <SYM>' to add.{RESET}\n")
+        return None
+
+    if action in ("IMPACT", "EI"):
+        if not arg:
+            print(f"\n  {DIM}Usage: impact <SYMBOL>{RESET}\n")
+        else:
+            sym = arg.split()[0]
+            print(f"\n  {DIM}Fetching earnings impact for {sym}...{RESET}")
+            impact = fetch_earnings_impact(sym)
+            if impact:
+                display_earnings_impact(impact, sym)
+            else:
+                print(f"  {RED}No earnings data for '{sym}'{RESET}\n")
+        return None
+
+    if action == "SCREEN":
+        if not arg or len(arg.split()) < 2:
+            print(f"\n  {DIM}Usage: screen <SYM> <SYM> [SYM...]{RESET}")
+            print(f"  {DIM}Example: screen NVDA MU AVGO LRCX{RESET}\n")
+        else:
+            syms = arg.split()
+            print(f"\n  {DIM}Fetching data for {', '.join(syms)}...{RESET}")
+            infos = fetch_batch_info(syms)
+            if infos:
+                display_screen(infos, syms)
+            else:
+                print(f"  {RED}No data available{RESET}\n")
+        return None
+
+    if action in ("ALERT", "AL"):
+        # Subcommands: alert (list), alert rm N (remove), alert SYM >N (add)
+        if not arg:
+            display_alerts(load_alerts())
+            return None
+        alert_parts = arg.split()
+        if alert_parts[0] == "RM" and len(alert_parts) >= 2:
+            try:
+                aid = int(alert_parts[1])
+                if remove_alert(aid):
+                    print(f"\n  {GREEN}Removed alert #{aid}{RESET}\n")
+                else:
+                    print(f"\n  {RED}Alert #{aid} not found{RESET}\n")
+            except ValueError:
+                print(f"\n  {RED}Invalid alert ID{RESET}\n")
+            return None
+        # Parse: SYM >N or SYM <N  (also handles "SYM > N" with spaces)
+        if len(alert_parts) >= 2:
+            sym = alert_parts[0]
+            cond = alert_parts[1]
+            op = None
+            val = None
+            if cond.startswith(">"):
+                op = ">"
+                try:
+                    val = float(cond[1:])
+                except ValueError:
+                    pass
+            elif cond.startswith("<"):
+                op = "<"
+                try:
+                    val = float(cond[1:])
+                except ValueError:
+                    pass
+            # Handle space between operator and value: "NVDA > 150"
+            if op and val is None and len(alert_parts) >= 3:
+                try:
+                    val = float(alert_parts[2])
+                except ValueError:
+                    pass
+            # Handle bare operator as separate token: "NVDA > 150"
+            if op is None and cond in (">", "<") and len(alert_parts) >= 3:
+                op = cond
+                try:
+                    val = float(alert_parts[2])
+                except ValueError:
+                    pass
+            if op and val is not None:
+                a = add_alert(sym, op, val)
+                print(f"\n  {GREEN}Alert #{a['id']}: {a['symbol']} {a['operator']}{a['value']:.2f}{RESET}\n")
+                return None
+        print(f"\n  {DIM}Usage: alert NVDA >150 | alert | alert rm 1{RESET}\n")
         return None
 
     if action in ("H", "HELP", "?"):
@@ -214,6 +304,9 @@ def check_upcoming_earnings() -> None:
 def main() -> None:
     quotes = show_tape()
     check_upcoming_earnings()
+    # Check price alerts against fresh quotes
+    triggered = evaluate_alerts(quotes)
+    display_triggered_alerts(triggered)
     print(f"  {DIM}Type 'help' for commands, or enter a ticker{RESET}\n")
 
     while True:

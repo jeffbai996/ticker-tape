@@ -50,3 +50,6 @@ MAGENTA = "\033[38;2;200;100;255m"
 
 # Watchlist persistence
 WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "watchlist.json")
+
+# Alert persistence
+ALERTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alerts.json")

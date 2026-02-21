@@ -40,13 +40,15 @@ def _fmt_pct(v) -> str:
 def _fmt_cap(cap) -> str:
     if cap is None:
         return "—"
+    sign = "-" if cap < 0 else ""
+    cap = abs(cap)
     if cap >= 1e12:
-        return f"${cap / 1e12:.2f}T"
+        return f"{sign}${cap / 1e12:.2f}T"
     if cap >= 1e9:
-        return f"${cap / 1e9:.2f}B"
+        return f"{sign}${cap / 1e9:.2f}B"
     if cap >= 1e6:
-        return f"${cap / 1e6:.2f}M"
-    return f"${cap:,.0f}"
+        return f"{sign}${cap / 1e6:.2f}M"
+    return f"{sign}${cap:,.0f}"
 
 
 def _row(label: str, value: str) -> str:
@@ -83,9 +85,9 @@ def _sparkline(prices: list[float], width: int = 40) -> str:
     return f"{color}{line}{RESET}"
 
 
-def _tall_chart(prices: list[float], width: int = 60, height: int = 8,
+def _line_chart(prices: list[float], width: int = 60, height: int = 8,
                 color: str | None = None) -> list[str]:
-    """Multi-row sparkline chart. Returns list of strings (top to bottom)."""
+    """Line chart — renders just the price trajectory, no fill."""
     if not prices or len(prices) < 2:
         return []
     lo, hi = min(prices), max(prices)
@@ -105,24 +107,24 @@ def _tall_chart(prices: list[float], width: int = 60, height: int = 8,
     if color is None:
         color = GREEN if sampled[-1] >= sampled[0] else RED
 
-    # Build rows top to bottom
-    blocks = " ▁▂▃▄▅▆▇█"
+    # Build grid
+    grid = [[" "] * width for _ in range(height)]
+    for col in range(width):
+        # Place the price point
+        grid[rows[col]][col] = "█"
+        # Vertical connector between adjacent columns when price jumps
+        if col > 0:
+            prev_row, curr_row = rows[col - 1], rows[col]
+            if abs(curr_row - prev_row) > 1:
+                lo_r = min(prev_row, curr_row) + 1
+                hi_r = max(prev_row, curr_row)
+                for r in range(lo_r, hi_r):
+                    grid[r][col] = "│"
+
+    # Render top to bottom
     lines = []
     for row_idx in range(height - 1, -1, -1):
-        line = ""
-        for col in range(width):
-            if rows[col] == row_idx:
-                # Price is at this row — draw a block
-                # Use fractional position within the row for finer resolution
-                frac = ((sampled[col] - lo) / spread) * (height - 1) - row_idx
-                block_idx = max(1, int(frac * (len(blocks) - 1)))
-                line += blocks[block_idx]
-            elif rows[col] > row_idx:
-                # Price is above this row — filled
-                line += "█"
-            else:
-                # Price is below this row — empty
-                line += " "
+        line = "".join(grid[row_idx])
         lines.append(f"{color}{line}{RESET}")
     return lines
 
@@ -475,7 +477,7 @@ def display_technicals(ta: dict, symbol: str) -> None:
     print(_row("Avg Vol (20d)", _fmt_num(ta["avg_vol_20"])))
     if ta["vol_ratio"] is not None:
         vr = ta["vol_ratio"]
-        vr_color = YELLOW if vr > 1.5 else (RED if vr > 2.0 else DIM)
+        vr_color = RED if vr > 2.0 else (YELLOW if vr > 1.5 else DIM)
         print(_row("Vol Ratio", f"{vr_color}{vr:.2f}x{RESET}"))
 
     _section("Range")
@@ -510,7 +512,7 @@ def display_chart(prices: list[float], symbol: str, period: str) -> None:
     total_chg = ((last - first) / first) * 100 if first else 0
     color = GREEN if total_chg >= 0 else RED
 
-    lines = _tall_chart(prices, width, height=8)
+    lines = _line_chart(prices, width, height=8)
     # Add price axis labels on right edge
     for i, line in enumerate(lines):
         if i == 0:
@@ -601,7 +603,7 @@ def display_comparison(data: dict[str, list[float]], symbols: list[str], period:
 
 
 def display_intraday(data: dict, symbol: str) -> None:
-    """Intraday chart with VWAP overlay."""
+    """Intraday dual line chart — price + VWAP, no fill."""
     print(f"\n  {BOLD}{YELLOW}═══ INTRADAY: {symbol} (5m) ═══{RESET}\n")
 
     try:
@@ -613,50 +615,69 @@ def display_intraday(data: dict, symbol: str) -> None:
     prices = data["prices"]
     vwap_prices = data["vwap"]
 
-    # Use shared scale for price and VWAP
+    if not prices or len(prices) < 2:
+        print(f"  {DIM}Not enough intraday data{RESET}\n")
+        return
+
+    # Shared scale
     all_vals = prices + vwap_prices
     lo, hi = min(all_vals), max(all_vals)
     spread = hi - lo if hi != lo else 1
 
-    # Resample both to same width
-    def resample(vals: list[float]) -> list[float]:
-        if len(vals) > width:
-            step = len(vals) / width
-            return [vals[int(i * step)] for i in range(width)]
+    def resample(vals: list[float], target: int) -> list[float]:
+        if len(vals) > target:
+            step = len(vals) / target
+            return [vals[int(i * step)] for i in range(target)]
         return vals
 
-    p_sampled = resample(prices)
-    v_sampled = resample(vwap_prices)
-    w = len(p_sampled)
+    # Resample both to same width to prevent IndexError
+    target_w = min(width, len(prices), len(vwap_prices))
+    p_sampled = resample(prices, target_w)
+    v_sampled = resample(vwap_prices, target_w)
+    w = min(len(p_sampled), len(v_sampled))
 
-    # Map to rows (0=bottom, height-1=top)
     def to_rows(vals):
         return [int(((v - lo) / spread) * (height - 1)) for v in vals]
 
-    p_rows = to_rows(p_sampled)
-    v_rows = to_rows(v_sampled)
+    p_rows = to_rows(p_sampled[:w])
+    v_rows = to_rows(v_sampled[:w])
 
     price_color = GREEN if p_sampled[-1] >= p_sampled[0] else RED
 
-    # Render: price as filled area, VWAP as line overlay
+    # Build grid: price as line, VWAP as line, no fill
     for row_idx in range(height - 1, -1, -1):
         line = ""
         for col in range(w):
+            is_price = p_rows[col] == row_idx
             is_vwap = v_rows[col] == row_idx
-            price_here = p_rows[col] >= row_idx
 
-            if is_vwap and price_here:
-                # VWAP on top of price fill — show VWAP color
-                line += f"{CYAN}━{RESET}"
-            elif is_vwap:
-                # VWAP line in empty space
-                line += f"{DIM}{CYAN}─{RESET}"
-            elif price_here:
+            # Vertical connectors for price line
+            price_vert = False
+            if col > 0 and not is_price:
+                prev_r, curr_r = p_rows[col - 1], p_rows[col]
+                if min(prev_r, curr_r) < row_idx < max(prev_r, curr_r):
+                    price_vert = True
+
+            # Vertical connectors for VWAP line
+            vwap_vert = False
+            if col > 0 and not is_vwap:
+                prev_v, curr_v = v_rows[col - 1], v_rows[col]
+                if min(prev_v, curr_v) < row_idx < max(prev_v, curr_v):
+                    vwap_vert = True
+
+            if is_price and is_vwap:
                 line += f"{price_color}█{RESET}"
+            elif is_price:
+                line += f"{price_color}█{RESET}"
+            elif price_vert:
+                line += f"{price_color}│{RESET}"
+            elif is_vwap:
+                line += f"{DIM}{CYAN}─{RESET}"
+            elif vwap_vert:
+                line += f"{DIM}{CYAN}│{RESET}"
             else:
                 line += " "
 
-        # Axis labels
         if row_idx == height - 1:
             print(f"  {line}  {DIM}{hi:.2f}{RESET}")
         elif row_idx == 0:
@@ -673,7 +694,7 @@ def display_intraday(data: dict, symbol: str) -> None:
 
     print(f"  {WHITE}{current:.2f}{RESET}  {vwap_color}{vwap_dist:+.2f}% {vwap_pos} VWAP ({vwap_val:.2f}){RESET}")
     print(f"  {DIM}Range: {data['low']:.2f} — {data['high']:.2f}  │  Vol: {data['volume']:,}{RESET}")
-    print(f"  {DIM}{price_color}█{RESET}{DIM} Price  {CYAN}─{RESET}{DIM} VWAP{RESET}")
+    print(f"  {price_color}█{RESET}{DIM} Price  {CYAN}─{RESET}{DIM} VWAP{RESET}")
     print()
 
 
@@ -738,13 +759,18 @@ def display_help() -> None:
         ("auto, a", "Auto-refresh tape every 15s"),
         ("thesis, t", "Thesis bucket dashboard"),
         ("earnings, er", "Upcoming earnings dates"),
+        ("impact, ei <SYM>", "Earnings impact + peer reaction"),
+        ("screen <S> <S>...", "Side-by-side valuation grid"),
         ("market, m", "Macro market overview"),
         ("news, n <SYM>", "Recent news headlines"),
         ("ta <SYM>", "Technical analysis (SMA/RSI)"),
         ("vs <S> <S> [period]", "Relative strength comparison"),
         ("intra, i <SYM>", "Intraday chart with VWAP"),
-        ("chart, c <SYM>", "ASCII sparkline price chart"),
+        ("chart, c <SYM>", "ASCII line chart"),
         ("sectors, s", "Sector performance heatmap"),
+        ("alert <S> >N", "Set price alert (> or <)"),
+        ("alert", "List all alerts"),
+        ("alert rm <ID>", "Remove alert by ID"),
         ("watch, w <SYM>", "Add symbol to watchlist"),
         ("unwatch, uw <SYM>", "Remove from watchlist"),
         ("watchlist, wl", "Show watchlist"),
@@ -753,4 +779,186 @@ def display_help() -> None:
     ]
     for cmd, desc in cmds:
         print(f"  {BOLD}{CYAN}{cmd:<18}{RESET} {DIM}{desc}{RESET}")
+    print()
+
+
+# ── Earnings impact ────────────────────────────────────────
+
+def display_earnings_impact(data: dict, symbol: str) -> None:
+    """Past earnings with EPS surprise and price/peer reaction."""
+    print(f"\n  {BOLD}{YELLOW}═══ EARNINGS IMPACT: {symbol} ═══{RESET}\n")
+    events = data["events"]
+    if not events:
+        print(f"  {DIM}No past earnings data{RESET}\n")
+        return
+
+    beats = 0
+    total_move = 0.0
+    move_count = 0
+
+    for ev in events:
+        # Header: date
+        print(f"  {BOLD}{WHITE}{ev['date']}{RESET}")
+
+        # EPS line
+        est_str = f"{ev['eps_est']:.2f}" if ev["eps_est"] is not None else "—"
+        act_str = f"{ev['eps_actual']:.2f}"
+        surp = ev["surprise_pct"]
+        if surp is not None:
+            surp_color = GREEN if surp >= 0 else RED
+            surp_str = f"{surp_color}{surp:+.1f}%{RESET}"
+            if surp >= 0:
+                beats += 1
+        else:
+            surp_str = f"{DIM}—{RESET}"
+        print(f"    EPS  est {DIM}{est_str}{RESET}  actual {WHITE}{act_str}{RESET}  surprise {surp_str}")
+
+        # Price move
+        pm = ev["price_move"]
+        if pm is not None:
+            pm_color = GREEN if pm >= 0 else RED
+            pm_arrow = "▲" if pm >= 0 else "▼"
+            print(f"    Move {pm_color}{pm_arrow} {pm:+.2f}%{RESET}")
+            total_move += pm
+            move_count += 1
+        else:
+            print(f"    Move {DIM}—{RESET}")
+
+        # Peer reaction
+        if ev["peers"]:
+            peer_strs = []
+            for p in ev["peers"]:
+                pc = GREEN if p["move"] >= 0 else RED
+                peer_strs.append(f"{p['sym']} {pc}{p['move']:+.1f}%{RESET}")
+            print(f"    Peers {DIM}│{RESET} {'  '.join(peer_strs)}")
+        print()
+
+    # Summary
+    avg_move = total_move / move_count if move_count else 0
+    avg_color = GREEN if avg_move >= 0 else RED
+    print(f"  {DIM}{'─' * 36}{RESET}")
+    print(f"  Beat streak: {GREEN}{beats}/{len(events)}{RESET}  "
+          f"Avg move: {avg_color}{avg_move:+.2f}%{RESET}")
+    print()
+
+
+# ── Valuation screen ───────────────────────────────────────
+
+def display_screen(infos: dict[str, dict], symbols: list[str]) -> None:
+    """Side-by-side valuation grid."""
+    present = [s for s in symbols if s in infos]
+    if not present:
+        print(f"\n  {DIM}No data available{RESET}\n")
+        return
+
+    print(f"\n  {BOLD}{YELLOW}═══ VALUATION SCREEN ═══{RESET}\n")
+
+    # Column width adapts to symbol count
+    col_w = max(10, min(14, 60 // len(present)))
+    label_w = 14
+
+    # Header
+    header = f"  {'':<{label_w}}"
+    for sym in present:
+        header += f" {BOLD}{YELLOW}{sym:>{col_w}}{RESET}"
+    print(header)
+    print(f"  {DIM}{'─' * (label_w + (col_w + 1) * len(present))}{RESET}")
+
+    # Metrics: (label, key_or_fn, format, higher_is_better)
+    metrics = [
+        ("Price", lambda i: i.get("regularMarketPrice"), lambda v: f"${v:.2f}", None),
+        ("P/E Fwd", lambda i: i.get("forwardPE"), lambda v: f"{v:.1f}", False),
+        ("EV/EBITDA", lambda i: i.get("enterpriseToEbitda"), lambda v: f"{v:.1f}", False),
+        ("Rev Growth", lambda i: _safe_pct(i.get("revenueGrowth")), lambda v: f"{v:.1f}%", True),
+        ("Gross Margin", lambda i: _safe_pct(i.get("grossMargins")), lambda v: f"{v:.1f}%", True),
+        ("FCF", lambda i: i.get("freeCashflow"), lambda v: _fmt_cap(v), True),
+        ("Off 52w High", lambda i: _off_high(i), lambda v: f"{v:.1f}%", True),
+    ]
+
+    for label, extract, fmt, higher_better in metrics:
+        vals = {}
+        for sym in present:
+            v = extract(infos[sym])
+            if v is not None and not (isinstance(v, float) and (v != v)):  # NaN check
+                vals[sym] = v
+
+        if not vals:
+            row = f"  {label:<{label_w}}"
+            for _ in present:
+                row += f" {DIM}{'—':>{col_w}}{RESET}"
+            print(row)
+            continue
+
+        # Find best/worst for coloring
+        if higher_better is True:
+            best_sym = max(vals, key=vals.get)
+            worst_sym = min(vals, key=vals.get)
+        elif higher_better is False:
+            best_sym = min(vals, key=vals.get)
+            worst_sym = max(vals, key=vals.get)
+        else:
+            best_sym = worst_sym = None
+
+        row = f"  {label:<{label_w}}"
+        for sym in present:
+            if sym not in vals:
+                row += f" {DIM}{'—':>{col_w}}{RESET}"
+            else:
+                v_str = fmt(vals[sym])
+                if higher_better is not None and len(vals) > 1 and sym == best_sym:
+                    row += f" {GREEN}{v_str:>{col_w}}{RESET}"
+                elif higher_better is not None and len(vals) > 1 and sym == worst_sym:
+                    row += f" {RED}{v_str:>{col_w}}{RESET}"
+                else:
+                    row += f" {WHITE}{v_str:>{col_w}}{RESET}"
+        print(row)
+
+    print()
+
+
+def _safe_pct(v) -> float | None:
+    """Convert ratio to percentage, handling None."""
+    if v is None:
+        return None
+    return v * 100
+
+
+def _off_high(info: dict) -> float | None:
+    """Calculate % off 52w high from info dict."""
+    price = info.get("regularMarketPrice")
+    high = info.get("fiftyTwoWeekHigh")
+    if price and high and high > 0:
+        return ((price - high) / high) * 100
+    return None
+
+
+# ── Alert display ──────────────────────────────────────────
+
+def display_alerts(alerts: list[dict]) -> None:
+    """List all active alerts."""
+    print(f"\n  {BOLD}{YELLOW}═══ ALERTS ═══{RESET}\n")
+    if not alerts:
+        print(f"  {DIM}No alerts set. Use 'alert NVDA >150' to add one.{RESET}\n")
+        return
+    for a in alerts:
+        print(
+            f"  {DIM}#{a['id']}{RESET}  "
+            f"{BOLD}{YELLOW}{a['symbol']:<5}{RESET}  "
+            f"{WHITE}{a['operator']}{a['value']:.2f}{RESET}  "
+            f"{DIM}(set {a['created']}){RESET}"
+        )
+    print()
+
+
+def display_triggered_alerts(triggered: list[dict]) -> None:
+    """Red banner for triggered alerts."""
+    if not triggered:
+        return
+    print(f"  {RED}{BOLD}⚠ ALERT TRIGGERED{RESET}")
+    for a in triggered:
+        print(
+            f"    {BOLD}{YELLOW}{a['symbol']:<5}{RESET}  "
+            f"{WHITE}{a['current_price']:.2f}{RESET}  "
+            f"{RED}{a['operator']}{a['value']:.2f} hit{RESET}"
+        )
     print()

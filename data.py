@@ -3,14 +3,17 @@
 import json
 import logging
 import os
-from datetime import date, datetime, time, timezone
+import tempfile
+from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import numpy as np
+import pandas as pd
 import yfinance as yf
 
-from config import SYMBOLS, NAMES, SECTOR_ETFS, WATCHLIST_FILE
+from config import SYMBOLS, NAMES, SECTOR_ETFS, THESIS_BUCKETS, WATCHLIST_FILE, ALERTS_FILE
 
+log = logging.getLogger(__name__)
 ET = ZoneInfo("America/New_York")
 
 
@@ -263,8 +266,9 @@ def fetch_technicals(symbol: str) -> dict | None:
 
         # RSI 14
         delta = close.diff()
-        gain = delta.where(delta > 0, 0).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+        # Wilder's smoothing (EMA with alpha=1/14) — matches TradingView/Bloomberg
+        gain = delta.where(delta > 0, 0).ewm(alpha=1/14, adjust=False).mean()
+        loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, adjust=False).mean()
         rs = gain / loss
         rsi = (100 - (100 / (1 + rs))).iloc[-1] if len(close) >= 15 else None
 
@@ -313,7 +317,7 @@ def fetch_chart_data(symbol: str, period: str = "1mo", interval: str = "1d") -> 
         hist = yf.Ticker(symbol).history(period=period, interval=interval)
         if hist.empty:
             return None
-        return hist["Close"].tolist()
+        return hist["Close"].dropna().tolist()
     except Exception:
         return None
 
@@ -335,8 +339,6 @@ def fetch_sector_performance() -> list[dict]:
     return results
 
 
-log = logging.getLogger(__name__)
-
 
 def fetch_comparison_data(symbols: list[str], period: str = "1mo") -> dict[str, list[float]] | None:
     """Fetch aligned closing prices for multiple symbols."""
@@ -344,16 +346,21 @@ def fetch_comparison_data(symbols: list[str], period: str = "1mo") -> dict[str, 
         df = yf.download(symbols, period=period, interval="1d", progress=False)
         if df.empty:
             return None
+        # yfinance 1.1.0 always returns MultiIndex columns (metric, ticker)
+        # Flatten to just ticker-level for the Close metric
         close = df["Close"]
-        # Single symbol returns a Series, not DataFrame
-        if len(symbols) == 1:
-            return {symbols[0]: close.dropna().tolist()}
         result = {}
-        for sym in symbols:
-            if sym in close.columns:
-                series = close[sym].dropna()
-                if len(series) >= 2:
-                    result[sym] = series.tolist()
+        if isinstance(close, pd.Series):
+            # Edge case: single symbol may return Series in some yfinance versions
+            series = close.dropna()
+            if len(series) >= 2:
+                result[symbols[0]] = series.tolist()
+        else:
+            for sym in symbols:
+                if sym in close.columns:
+                    series = close[sym].dropna()
+                    if len(series) >= 2:
+                        result[sym] = series.tolist()
         return result if result else None
     except Exception as e:
         log.warning("fetch_comparison_data failed: %s", e)
@@ -408,11 +415,19 @@ def _load_watchlist_data() -> dict:
         return {"symbols": [], "names": {}}
 
 
+def _atomic_write_json(filepath: str, data) -> None:
+    """Write JSON atomically — temp file then rename to prevent corruption."""
+    dir_name = os.path.dirname(filepath)
+    with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, suffix=".tmp") as tmp:
+        json.dump(data, tmp, indent=2)
+        tmp_path = tmp.name
+    os.replace(tmp_path, filepath)
+
+
 def _save_watchlist_data(data: dict) -> None:
     """Save raw watchlist JSON."""
     data["symbols"] = sorted(set(data["symbols"]))
-    with open(WATCHLIST_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    _atomic_write_json(WATCHLIST_FILE, data)
 
 
 def load_watchlist() -> list[str]:
@@ -456,3 +471,186 @@ def remove_from_watchlist(symbol: str) -> bool:
     data["names"].pop(sym, None)
     _save_watchlist_data(data)
     return True
+
+
+# ── Earnings impact ────────────────────────────────────────
+
+def fetch_earnings_impact(symbol: str, limit: int = 4) -> dict | None:
+    """Fetch past earnings with EPS surprise and price reaction."""
+    try:
+        t = yf.Ticker(symbol)
+        df = t.get_earnings_dates(limit=20)
+        if df is None or df.empty:
+            return None
+
+        today = date.today()
+        events = []
+        for idx, row in df.iterrows():
+            # idx is a Timestamp — only keep past dates with reported EPS
+            dt = idx.to_pydatetime()
+            if dt.date() >= today:
+                continue
+            reported = row.get("Reported EPS")
+            if reported is None or (isinstance(reported, float) and np.isnan(reported)):
+                continue
+
+            eps_est = row.get("EPS Estimate")
+            surprise = row.get("Surprise(%)")
+
+            # Price move: close before -> close after earnings
+            earn_date = dt.date()
+            price_move = None
+            try:
+                hist = t.history(
+                    start=earn_date - timedelta(days=5),
+                    end=earn_date + timedelta(days=5),
+                    interval="1d",
+                )
+                if len(hist) >= 2:
+                    # Find the bar on or just before earnings, and the bar after
+                    dates_list = [d.date() if hasattr(d, "date") else d for d in hist.index]
+                    before_idx = None
+                    after_idx = None
+                    for i, d in enumerate(dates_list):
+                        bar_date = d() if callable(d) else d
+                        if bar_date <= earn_date:
+                            before_idx = i
+                        elif before_idx is not None and after_idx is None:
+                            after_idx = i
+                    if before_idx is not None and after_idx is not None:
+                        close_before = hist["Close"].iloc[before_idx]
+                        close_after = hist["Close"].iloc[after_idx]
+                        price_move = ((close_after - close_before) / close_before) * 100
+            except Exception:
+                pass
+
+            # Peer reaction: same-group symbols
+            peers = []
+            sym_upper = symbol.upper()
+            peer_syms = []
+            for bucket_syms in THESIS_BUCKETS.values():
+                if sym_upper in bucket_syms:
+                    peer_syms = [s for s in bucket_syms if s != sym_upper]
+                    break
+
+            for peer in peer_syms:
+                try:
+                    ph = yf.Ticker(peer).history(
+                        start=earn_date - timedelta(days=5),
+                        end=earn_date + timedelta(days=5),
+                        interval="1d",
+                    )
+                    if len(ph) >= 2:
+                        p_dates = [d.date() if hasattr(d, "date") else d for d in ph.index]
+                        bi, ai = None, None
+                        for i, d in enumerate(p_dates):
+                            bar_date = d() if callable(d) else d
+                            if bar_date <= earn_date:
+                                bi = i
+                            elif bi is not None and ai is None:
+                                ai = i
+                        if bi is not None and ai is not None:
+                            cb = ph["Close"].iloc[bi]
+                            ca = ph["Close"].iloc[ai]
+                            peers.append({"sym": peer, "move": ((ca - cb) / cb) * 100})
+                except Exception:
+                    pass
+
+            events.append({
+                "date": str(earn_date),
+                "eps_est": float(eps_est) if eps_est is not None and not (isinstance(eps_est, float) and np.isnan(eps_est)) else None,
+                "eps_actual": float(reported),
+                "surprise_pct": float(surprise) if surprise is not None and not (isinstance(surprise, float) and np.isnan(surprise)) else None,
+                "price_move": price_move,
+                "peers": peers,
+            })
+
+            if len(events) >= limit:
+                break
+
+        if not events:
+            return None
+        return {"symbol": symbol.upper(), "events": events}
+    except Exception as e:
+        log.warning("fetch_earnings_impact failed for %s: %s", symbol, e)
+        return None
+
+
+# ── Batch info for valuation screen ────────────────────────
+
+def fetch_batch_info(symbols: list[str]) -> dict[str, dict]:
+    """Fetch .info for multiple symbols."""
+    result = {}
+    tickers = yf.Tickers(" ".join(symbols))
+    for sym in symbols:
+        try:
+            info = tickers.tickers[sym].info
+            if info and info.get("regularMarketPrice"):
+                result[sym] = info
+        except Exception:
+            pass
+    return result
+
+
+# ── Alert engine ───────────────────────────────────────────
+
+def load_alerts() -> list[dict]:
+    """Load alerts from disk."""
+    if not os.path.exists(ALERTS_FILE):
+        return []
+    try:
+        with open(ALERTS_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_alerts(alerts: list[dict]) -> None:
+    """Persist alerts to JSON."""
+    _atomic_write_json(ALERTS_FILE, alerts)
+
+
+def add_alert(symbol: str, operator: str, value: float) -> dict:
+    """Create a new alert and persist it."""
+    alerts = load_alerts()
+    next_id = max((a["id"] for a in alerts), default=0) + 1
+    alert = {
+        "id": next_id,
+        "symbol": symbol.upper(),
+        "operator": operator,
+        "value": value,
+        "created": datetime.now(ET).strftime("%Y-%m-%d %H:%M"),
+    }
+    alerts.append(alert)
+    save_alerts(alerts)
+    return alert
+
+
+def remove_alert(alert_id: int) -> bool:
+    """Remove an alert by id. Returns False if not found."""
+    alerts = load_alerts()
+    before = len(alerts)
+    alerts = [a for a in alerts if a["id"] != alert_id]
+    if len(alerts) == before:
+        return False
+    save_alerts(alerts)
+    return True
+
+
+def evaluate_alerts(quotes: list[dict]) -> list[dict]:
+    """Check all alerts against current quotes. Returns triggered alerts."""
+    alerts = load_alerts()
+    if not alerts:
+        return []
+    # Explicit None check — don't skip symbols where price is 0.0 (failed fetch)
+    price_map = {q["symbol"]: q["price"] for q in quotes if q.get("price") is not None}
+    triggered = []
+    for a in alerts:
+        price = price_map.get(a["symbol"])
+        if price is None:
+            continue
+        if a["operator"] == ">" and price > a["value"]:
+            triggered.append({**a, "current_price": price})
+        elif a["operator"] == "<" and price < a["value"]:
+            triggered.append({**a, "current_price": price})
+    return triggered
