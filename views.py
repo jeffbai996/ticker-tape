@@ -481,6 +481,109 @@ def display_sectors(sector_data: list[dict]) -> None:
     print()
 
 
+def display_comparison(data: dict[str, list[float]], symbols: list[str], period: str) -> None:
+    """Normalized relative strength sparklines."""
+    print(f"\n  {BOLD}{YELLOW}═══ RELATIVE STRENGTH ({period}) ═══{RESET}\n")
+
+    # Normalize each series to 100 at start, track returns
+    normalized = {}
+    returns = {}
+    for sym in symbols:
+        if sym not in data:
+            continue
+        prices = data[sym]
+        base = prices[0]
+        if base <= 0:
+            continue
+        normalized[sym] = [p / base * 100 for p in prices]
+        returns[sym] = ((prices[-1] - base) / base) * 100
+
+    if not normalized:
+        print(f"  {DIM}No data available{RESET}\n")
+        return
+
+    # Global min/max across all normalized series for consistent scale
+    all_vals = [v for series in normalized.values() for v in series]
+    global_lo, global_hi = min(all_vals), max(all_vals)
+
+    try:
+        width = min(os.get_terminal_size().columns - 20, 50)
+    except OSError:
+        width = 50
+
+    # Rank by return
+    ranked = sorted(returns.items(), key=lambda x: x[1], reverse=True)
+
+    blocks = " ▁▂▃▄▅▆▇█"
+    spread = global_hi - global_lo if global_hi != global_lo else 1
+
+    for sym, ret in ranked:
+        series = normalized[sym]
+        color = GREEN if ret >= 0 else RED
+
+        # Resample to fit width
+        if len(series) > width:
+            step = len(series) / width
+            sampled = [series[int(i * step)] for i in range(width)]
+        else:
+            sampled = series
+
+        line = ""
+        for p in sampled:
+            idx = int(((p - global_lo) / spread) * (len(blocks) - 1))
+            line += blocks[idx]
+
+        print(f"  {BOLD}{YELLOW}{sym:<5}{RESET} {color}{line}{RESET}  {color}{ret:+.2f}%{RESET}")
+
+    print()
+
+
+def display_intraday(data: dict, symbol: str) -> None:
+    """Intraday sparkline with VWAP."""
+    print(f"\n  {BOLD}{YELLOW}═══ INTRADAY: {symbol} (5m) ═══{RESET}\n")
+
+    try:
+        width = min(os.get_terminal_size().columns - 8, 60)
+    except OSError:
+        width = 60
+
+    # Price sparkline
+    spark = _sparkline(data["prices"], width)
+    print(f"  {spark}")
+
+    # VWAP sparkline (dimmed)
+    vwap_prices = data["vwap"]
+    if vwap_prices and len(vwap_prices) >= 2:
+        # Use same scale as price for visual comparison
+        all_vals = data["prices"] + vwap_prices
+        lo, hi = min(all_vals), max(all_vals)
+        spread = hi - lo if hi != lo else 1
+        blocks = " ▁▂▃▄▅▆▇█"
+
+        if len(vwap_prices) > width:
+            step = len(vwap_prices) / width
+            sampled = [vwap_prices[int(i * step)] for i in range(width)]
+        else:
+            sampled = vwap_prices
+
+        vline = ""
+        for p in sampled:
+            idx = int(((p - lo) / spread) * (len(blocks) - 1))
+            vline += blocks[idx]
+        print(f"  {DIM}{CYAN}{vline}{RESET}  {DIM}VWAP{RESET}")
+
+    # Stats
+    current = data["current"]
+    vwap_val = data["vwap_current"]
+    vwap_dist = ((current - vwap_val) / vwap_val) * 100 if vwap_val else 0
+    vwap_color = GREEN if current >= vwap_val else RED
+    vwap_pos = "above" if current >= vwap_val else "below"
+
+    print(f"\n  {WHITE}{current:.2f}{RESET}  {vwap_color}{vwap_dist:+.2f}% {vwap_pos} VWAP ({vwap_val:.2f}){RESET}")
+    print(f"  {DIM}Range: {data['low']:.2f} — {data['high']:.2f}  │  Vol: {data['volume']:,}{RESET}")
+    print()
+
+
 def auto_refresh_tape(fetch_fn, interval: int = 15) -> list[dict]:
     """Auto-refreshing static tape. Returns final quotes on exit."""
     try:
@@ -545,6 +648,8 @@ def display_help() -> None:
         ("market, m", "Macro market overview"),
         ("news, n <SYM>", "Recent news headlines"),
         ("ta <SYM>", "Technical analysis (SMA/RSI)"),
+        ("vs <S> <S> [period]", "Relative strength comparison"),
+        ("intra, i <SYM>", "Intraday chart with VWAP"),
         ("chart, c <SYM>", "ASCII sparkline price chart"),
         ("sectors, s", "Sector performance heatmap"),
         ("watch <SYM>", "Add symbol to watchlist"),

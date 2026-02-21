@@ -10,11 +10,13 @@ from data import (
     get_all_symbols, fetch_quotes, fetch_stock_info, fetch_earnings,
     fetch_market_overview, fetch_news, fetch_technicals, fetch_chart_data,
     fetch_sector_performance, load_watchlist, add_to_watchlist, remove_from_watchlist,
+    fetch_comparison_data, fetch_intraday_data,
 )
 from views import (
     scrolling_tape, display_lookup, display_thesis, display_earnings,
     display_market, display_news, display_technicals, display_chart,
     display_sectors, display_help, auto_refresh_tape,
+    display_comparison, display_intraday,
 )
 
 
@@ -80,6 +82,41 @@ def handle_command(cmd: str, quotes: list[dict]) -> list[dict] | None:
                 display_technicals(ta, arg)
             else:
                 print(f"  {RED}No data for '{arg}'{RESET}\n")
+        return None
+
+    if action == "VS":
+        if not arg or len(arg.split()) < 2:
+            print(f"\n  {DIM}Usage: vs <SYM> <SYM> [SYM...] [period]{RESET}")
+            print(f"  {DIM}Example: vs NVDA MU AVGO 3mo{RESET}\n")
+        else:
+            vs_parts = arg.split()
+            valid_periods = ("1w", "1mo", "3mo", "6mo", "1y", "2y", "ytd")
+            # Check if last arg is a period
+            if vs_parts[-1].lower() in valid_periods:
+                vs_syms = vs_parts[:-1]
+                vs_period = vs_parts[-1].lower()
+            else:
+                vs_syms = vs_parts
+                vs_period = "1mo"
+            print(f"\n  {DIM}Fetching comparison data...{RESET}")
+            comp_data = fetch_comparison_data(vs_syms, vs_period)
+            if comp_data:
+                display_comparison(comp_data, vs_syms, vs_period)
+            else:
+                print(f"  {RED}No data available{RESET}\n")
+        return None
+
+    if action in ("I", "INTRA"):
+        if not arg:
+            print(f"\n  {DIM}Usage: intra <SYMBOL>{RESET}\n")
+        else:
+            sym = arg.split()[0]
+            print(f"\n  {DIM}Fetching intraday data for {sym}...{RESET}")
+            intra = fetch_intraday_data(sym)
+            if intra:
+                display_intraday(intra, sym)
+            else:
+                print(f"  {RED}No intraday data for '{sym}'{RESET}\n")
         return None
 
     if action in ("C", "CHART"):

@@ -1,10 +1,12 @@
 """Data fetching and persistence for the terminal ticker."""
 
 import json
+import logging
 import os
 from datetime import date, datetime, time, timezone
 from zoneinfo import ZoneInfo
 
+import numpy as np
 import yfinance as yf
 
 from config import SYMBOLS, SECTOR_ETFS, WATCHLIST_FILE
@@ -331,6 +333,64 @@ def fetch_sector_performance() -> list[dict]:
             results.append({"symbol": sym, "name": name, "price": 0.0, "change": 0.0, "pct": 0.0})
     results.sort(key=lambda x: x["pct"], reverse=True)
     return results
+
+
+log = logging.getLogger(__name__)
+
+
+def fetch_comparison_data(symbols: list[str], period: str = "1mo") -> dict[str, list[float]] | None:
+    """Fetch aligned closing prices for multiple symbols."""
+    try:
+        df = yf.download(symbols, period=period, interval="1d", progress=False)
+        if df.empty:
+            return None
+        close = df["Close"]
+        # Single symbol returns a Series, not DataFrame
+        if len(symbols) == 1:
+            return {symbols[0]: close.dropna().tolist()}
+        result = {}
+        for sym in symbols:
+            if sym in close.columns:
+                series = close[sym].dropna()
+                if len(series) >= 2:
+                    result[sym] = series.tolist()
+        return result if result else None
+    except Exception as e:
+        log.warning("fetch_comparison_data failed: %s", e)
+        return None
+
+
+def fetch_intraday_data(symbol: str) -> dict | None:
+    """Fetch today's 5-min bars with VWAP calculation."""
+    try:
+        hist = yf.Ticker(symbol).history(period="1d", interval="5m")
+        if hist.empty or len(hist) < 2:
+            return None
+
+        closes = hist["Close"].values
+        volumes = hist["Volume"].values
+        highs = hist["High"].values
+        lows = hist["Low"].values
+
+        # VWAP: cumulative(typical_price * volume) / cumulative(volume)
+        typical = (closes + highs + lows) / 3
+        cum_vol = np.cumsum(volumes)
+        cum_tp_vol = np.cumsum(typical * volumes)
+        # Avoid division by zero for pre-market bars with no volume
+        vwap = np.where(cum_vol > 0, cum_tp_vol / cum_vol, closes)
+
+        return {
+            "prices": closes.tolist(),
+            "vwap": vwap.tolist(),
+            "current": float(closes[-1]),
+            "vwap_current": float(vwap[-1]),
+            "high": float(np.max(highs)),
+            "low": float(np.min(lows)),
+            "volume": int(np.sum(volumes)),
+        }
+    except Exception as e:
+        log.warning("fetch_intraday_data failed for %s: %s", symbol, e)
+        return None
 
 
 def load_watchlist() -> list[str]:
