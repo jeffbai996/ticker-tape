@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import yfinance as yf
 
-from config import SYMBOLS, SECTOR_ETFS, WATCHLIST_FILE
+from config import SYMBOLS, NAMES, SECTOR_ETFS, WATCHLIST_FILE
 
 ET = ZoneInfo("America/New_York")
 
