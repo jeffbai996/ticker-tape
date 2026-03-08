@@ -637,6 +637,32 @@ def remove_alert(alert_id: int) -> bool:
     return True
 
 
+# ── IBKR wrappers ─────────────────────────────────────────
+
+def fetch_ibkr_positions() -> str | None:
+    """IBKR positions via MCP."""
+    from ibkr_client import call_ibkr_tool
+    return call_ibkr_tool("ibkr_get_positions")
+
+
+def fetch_ibkr_account() -> str | None:
+    """IBKR account summary via MCP."""
+    from ibkr_client import call_ibkr_tool
+    return call_ibkr_tool("ibkr_get_account_summary")
+
+
+def fetch_ibkr_pnl() -> str | None:
+    """IBKR P&L via MCP."""
+    from ibkr_client import call_ibkr_tool
+    return call_ibkr_tool("ibkr_get_account_pnl")
+
+
+def fetch_ibkr_snapshot() -> str | None:
+    """IBKR portfolio snapshot via MCP."""
+    from ibkr_client import call_ibkr_tool
+    return call_ibkr_tool("ibkr_get_portfolio_snapshot")
+
+
 def evaluate_alerts(quotes: list[dict]) -> list[dict]:
     """Check all alerts against current quotes. Returns triggered alerts."""
     alerts = load_alerts()

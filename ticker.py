@@ -12,6 +12,7 @@ from data import (
     fetch_comparison_data, fetch_intraday_data, get_all_names,
     fetch_earnings_impact, fetch_batch_info,
     load_alerts, add_alert, remove_alert, evaluate_alerts,
+    fetch_ibkr_positions, fetch_ibkr_account, fetch_ibkr_pnl,
 )
 from views import (
     scrolling_tape, display_lookup, display_thesis, display_earnings,
@@ -20,7 +21,9 @@ from views import (
     display_comparison, display_intraday,
     display_earnings_impact, display_screen,
     display_alerts, display_triggered_alerts,
+    display_ibkr_output, display_chat_response,
 )
+import chat as chat_module
 
 
 def cleanup(sig=None, frame=None) -> None:
@@ -41,11 +44,12 @@ def show_tape() -> list[dict]:
     return quotes
 
 
-def handle_command(cmd: str, quotes: list[dict]) -> list[dict] | None:
+def handle_command(cmd: str, quotes: list[dict], raw_cmd: str = "") -> list[dict] | None:
     """Process a command. Returns updated quotes if refreshed, else None."""
     parts = cmd.split(maxsplit=1)
     action = parts[0]
     arg = parts[1].strip().upper() if len(parts) > 1 else ""
+    raw_parts = raw_cmd.split(maxsplit=1) if raw_cmd else parts
 
     if action in ("A", "AUTO"):
         return auto_refresh_tape(lambda: fetch_quotes(get_all_symbols()))
@@ -209,6 +213,49 @@ def handle_command(cmd: str, quotes: list[dict]) -> list[dict] | None:
                 print(f"  {RED}No data available{RESET}\n")
         return None
 
+    if action in ("POS", "POSITIONS"):
+        print(f"\n  {DIM}Fetching IBKR positions...{RESET}")
+        result = fetch_ibkr_positions()
+        if result:
+            display_ibkr_output(result, "IBKR POSITIONS")
+        else:
+            print(f"\n  {RED}IBKR unavailable{RESET}\n")
+        return None
+
+    if action in ("ACCT", "ACCOUNT"):
+        print(f"\n  {DIM}Fetching IBKR account...{RESET}")
+        result = fetch_ibkr_account()
+        if result:
+            display_ibkr_output(result, "IBKR ACCOUNT")
+        else:
+            print(f"\n  {RED}IBKR unavailable{RESET}\n")
+        return None
+
+    if action == "PNL":
+        print(f"\n  {DIM}Fetching IBKR P&L...{RESET}")
+        result = fetch_ibkr_pnl()
+        if result:
+            display_ibkr_output(result, "IBKR P&L")
+        else:
+            print(f"\n  {RED}IBKR unavailable{RESET}\n")
+        return None
+
+    if action in ("CHAT", "AI"):
+        if arg:
+            # Single-turn: question was provided (preserve original case)
+            raw_question = raw_parts[1].strip() if len(raw_parts) > 1 else arg
+            print(f"\n  {DIM}Thinking...{RESET}", end="", flush=True)
+            response = chat_module.chat_single_turn(raw_question, quotes)
+            print(f"\r\033[2K", end="")
+            if response is None:
+                print(f"\n  {RED}Set GEMINI_API_KEY in .env to use chat{RESET}\n")
+            else:
+                display_chat_response(response)
+        else:
+            # Multi-turn interactive mode
+            chat_module.chat_multi_turn(quotes)
+        return None
+
     if action in ("ALERT", "AL"):
         # Subcommands: alert (list), alert rm N (remove), alert SYM >N (add)
         if not arg:
@@ -311,16 +358,17 @@ def main() -> None:
 
     while True:
         try:
-            cmd = input(f"  {CYAN}ticker>{RESET} ").strip().upper()
+            raw = input(f"  {CYAN}ticker>{RESET} ").strip()
         except (EOFError, KeyboardInterrupt):
             cleanup()
 
-        if not cmd:
+        if not raw:
             continue
+        cmd = raw.upper()
         if cmd in ("Q", "QUIT", "EXIT"):
             cleanup()
 
-        result = handle_command(cmd, quotes)
+        result = handle_command(cmd, quotes, raw_cmd=raw)
         if result is not None:
             quotes = result
 

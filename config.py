@@ -2,6 +2,16 @@
 
 import os
 
+from dotenv import load_dotenv
+load_dotenv()
+
+# IBKR MCP
+IBKR_MCP_URL = os.getenv("IBKR_MCP_URL", "http://100.100.62.86:8000/mcp/")
+
+# Gemini
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
+
 # Portfolio holdings
 SYMBOLS = ["MU", "AVGO", "NVDA", "GOOG", "LRCX", "RKLB"]
 NAMES = {

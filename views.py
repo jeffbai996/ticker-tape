@@ -750,6 +750,19 @@ def auto_refresh_tape(fetch_fn, interval: int = 15) -> list[dict]:
     return quotes
 
 
+def display_ibkr_output(content: str, title: str) -> None:
+    """Display IBKR tool output with header."""
+    print(f"\n  {BOLD}{YELLOW}═══ {title} ═══{RESET}\n")
+    for line in content.splitlines():
+        print(f"  {line}")
+    print()
+
+
+def display_chat_response(response: str) -> None:
+    """Display a single-turn chat response."""
+    print(f"\n  {BOLD}{CYAN}AI:{RESET} {response}\n")
+
+
 def display_help() -> None:
     """Available commands."""
     print(f"\n  {BOLD}{YELLOW}═══ COMMANDS ═══{RESET}\n")
@@ -768,6 +781,11 @@ def display_help() -> None:
         ("intra, i <SYM>", "Intraday chart with VWAP"),
         ("chart, c <SYM>", "ASCII line chart"),
         ("sectors, s", "Sector performance heatmap"),
+        ("pos", "IBKR positions + market value"),
+        ("acct", "IBKR account summary + margin"),
+        ("pnl", "IBKR daily/unrealized/realized P&L"),
+        ("chat <question>", "AI Q&A with portfolio context"),
+        ("chat", "Enter multi-turn chat mode"),
         ("alert <S> >N", "Set price alert (> or <)"),
         ("alert", "List all alerts"),
         ("alert rm <ID>", "Remove alert by ID"),
@@ -778,7 +796,7 @@ def display_help() -> None:
         ("q, quit, exit", "Exit"),
     ]
     for cmd, desc in cmds:
-        print(f"  {BOLD}{CYAN}{cmd:<18}{RESET} {DIM}{desc}{RESET}")
+        print(f"  {BOLD}{CYAN}{cmd:<20}{RESET} {DIM}{desc}{RESET}")
     print()
 
 
