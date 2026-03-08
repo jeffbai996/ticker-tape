@@ -115,11 +115,14 @@ def _to_date(raw) -> date | None:
 
 def fetch_earnings(symbols: list[str]) -> list[dict]:
     """Fetch next earnings date for each symbol."""
+    import io, contextlib
     results = []
     today = date.today()
     for sym in symbols:
         try:
-            cal = yf.Ticker(sym).calendar
+            # Suppress yfinance HTTP error output for ETFs/commodities with no earnings
+            with contextlib.redirect_stderr(io.StringIO()):
+                cal = yf.Ticker(sym).calendar
             dates = []
             if isinstance(cal, dict):
                 dates = cal.get("Earnings Date", [])
@@ -135,9 +138,9 @@ def fetch_earnings(symbols: list[str]) -> list[dict]:
                     results.append({"symbol": sym, "date": str(d), "days_until": (d - today).days})
                     continue
 
-            results.append({"symbol": sym, "date": "Unknown", "days_until": None})
+            results.append({"symbol": sym, "date": "N/A", "days_until": None})
         except Exception:
-            results.append({"symbol": sym, "date": "Error", "days_until": None})
+            results.append({"symbol": sym, "date": "N/A", "days_until": None})
     return results
 
 

@@ -16,7 +16,7 @@ async def _call_ibkr_tool(tool_name: str, arguments: dict | None = None) -> str:
     """Open a streamable-http session, call one tool, return text result."""
     transport_kwargs = {
         "url": IBKR_MCP_URL,
-        "httpx_client_factory": lambda: httpx.AsyncClient(timeout=10),
+        "httpx_client_factory": lambda **kwargs: httpx.AsyncClient(timeout=10, **kwargs),
     }
     async with streamablehttp_client(**transport_kwargs) as (r, w, _):
         async with ClientSession(r, w) as session:
