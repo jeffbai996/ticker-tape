@@ -14,6 +14,9 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 **Refresh**: 30-second quote cycle, parallel sparkline fetches (6 workers), quotes display before charts load
 **Cache**: 30-second TTL on `.info` calls — eliminates redundant yfinance requests across sidebar, thesis, and lookup views
+**Compact mode**: Toggle with `c` — two-line-per-symbol view with technicals, auto-enables on narrow terminals
+**Watchlist groups**: Named symbol groups with sidebar headers, synced to thesis buckets at runtime
+**Alerts**: Price-level alerts with fire-once trigger and auto-removal
 **i18n**: Full English/Chinese with ~230 translation keys, CJK display-width-aware column alignment via `unicodedata.east_asian_width()`
 
 ## Screens
@@ -28,7 +31,17 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 | **Earnings** | Calendar with countdown, EPS estimates from yfinance calendar dict |
 | **Economic** | FOMC, CPI, NFP, GDP, PCE dates with urgency coloring |
 | **Insider** | Recent insider transactions with type/value/shares |
-| **Chat** | Multi-model (Gemini, Haiku, Sonnet, Opus, GPT), DuckDuckGo search for Claude, streaming responses, chain-of-thought display, persistent history, shared memory system |
+| **Options** | Options chain with IV, greeks, ATM/ITM/OTM tagging, moneyness filtering, expiration picker |
+| **Correlation** | NxN correlation matrix across watchlist, color-coded by strength, avg pairwise metric |
+| **Chat** | 7-model AI chat (Gemini Flash/Pro, Claude Haiku/Sonnet/Opus, GPT/GPT-mini) with terminal screen context awareness, DuckDuckGo web search, streaming responses, chain-of-thought display, persistent history, shared memory system |
+
+## AI Chat
+
+Seven models across three providers — switch mid-conversation with `model`. Gemini Flash-Lite and Flash for fast answers, Pro for depth. Claude Haiku, Sonnet, and Opus with extended thinking and DuckDuckGo web search. GPT and GPT-mini with reasoning.
+
+The assistant sees everything you see. Live quotes, IBKR portfolio snapshots, and the last 50 lines of terminal output are injected into context automatically. Run `pos` or `acct`, switch to chat, and ask about what's on screen — no copy-pasting needed.
+
+Conversation history persists across sessions and model switches. A shared memory system lets the assistant remember facts across conversations — portfolio context, prior analysis, user preferences. Token usage and per-model cost tracked in `history`.
 
 ## Status Bar
 
@@ -36,7 +49,7 @@ Static indices (S&P, Nasdaq, HSI, VIX, WTI, Brent, Gold, Silver, Natgas) + toggl
 
 ## IBKR Integration
 
-Multi-account MCP client — positions, account summary, P&L, margin impact calculator, what-if order analysis, today's executions. Per-account labels with gateway-down detection. Parallel context fetch for AI chat system prompt.
+Multi-account MCP client — positions, account summary, P&L, margin impact calculator (buy/sell), what-if order analysis, today's executions. Per-account labels with gateway-down detection. Compact column formatting with currency filtering. Parallel context fetch for AI chat system prompt.
 
 ## Stack
 
@@ -49,7 +62,7 @@ Multi-account MCP client — positions, account summary, P&L, margin impact calc
 - `ddgs` — DuckDuckGo search (Claude web tool)
 - `mcp` — IBKR MCP client (streamable HTTP)
 - `httpx` — Async HTTP transport
-- `pytest` — 308 tests covering data layer, formatters, screens, MCP pipeline
+- `pytest` — 429 tests covering data layer, formatters, screens, MCP pipeline
 
 ## Demo
 
