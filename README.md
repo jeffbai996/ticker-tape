@@ -151,7 +151,7 @@ What-if margin analysis uses IB's `OrderState` Before/After fields directly — 
 - `tavily` — LLM-optimized web search (DDG fallback)
 - `mcp` — IBKR MCP client (streamable HTTP)
 - `httpx` — Async HTTP transport
-- `pytest` — 460 tests covering data layer, formatters, screens, chat, memory tags, MCP pipeline
+- `pytest` — 500 tests covering data layer, formatters, screens, chat, journal, memory tags, MCP pipeline
 
 ## Demo
 
