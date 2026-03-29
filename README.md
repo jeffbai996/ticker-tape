@@ -1,5 +1,5 @@
 # ticker_tape — Interactive CLI Trading Terminal
-*version 2.0.4*
+*version 2.0.5*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -17,7 +17,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 **Compact mode**: Toggle with `c` — two-line-per-symbol view with sparklines, earnings, technicals, and sidebar watchlist. Auto-enables on narrow terminals
 **Watchlist groups**: Named symbol groups with sidebar headers, synced to thesis buckets at runtime
 **Alerts**: Price-level alerts with fire-once trigger and auto-removal
-**i18n**: Full English/Chinese with ~230 translation keys, CJK display-width-aware column alignment via `unicodedata.east_asian_width()`
+**i18n**: Full English/Chinese with ~230 translation keys
 
 ## Screens
 
@@ -33,23 +33,112 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 | **Insider** | Recent insider transactions with type/value/shares |
 | **Options** | Options chain with IV, greeks, ATM/ITM/OTM tagging, moneyness filtering, expiration picker |
 | **Correlation** | NxN correlation matrix across watchlist, color-coded by strength, avg pairwise metric |
-| **Chat** | 6-model AI chat (Gemini Flash/Pro, Claude Haiku/Sonnet/Opus, GPT/GPT-mini) with terminal screen context awareness, DuckDuckGo web search, streaming responses, chain-of-thought display, persistent history, shared memory system |
+| **Comparison** | Side-by-side multi-symbol performance comparison |
+| **Screening** | Quick multi-symbol comparison table for filtering ideas |
 
 ## AI Chat
 
-Six models across three providers — switch mid-conversation with `model`. Gemini Flash for fast answers, Pro for depth. Claude Haiku, Sonnet, and Opus with extended thinking and DuckDuckGo web search. GPT and GPT-mini with reasoning.
+Seven models across three providers — switch mid-conversation with `model`.
 
-The assistant sees everything you see. Live quotes, IBKR portfolio snapshots, and the last 50 lines of terminal output are injected into context automatically. Run `pos` or `acct`, switch to chat, and ask about what's on screen — no copy-pasting needed.
+| Model | Provider | Thinking | Context | Notes |
+|-------|----------|----------|---------|-------|
+| Gemini Flash | Google | — | 900K | Fast answers, cheapest |
+| Gemini Pro | Google | 2,000 | 900K | Deep analysis |
+| Haiku 4.5 | Anthropic | — | 200K | Fast summarization |
+| Sonnet 4.6 | Anthropic | 4,000 | 180K | Balanced |
+| Opus 4.6 | Anthropic | 8,000 | 180K | Strongest reasoning |
+| GPT-5.4 mini | OpenAI | — | 120K | Fast GPT |
+| GPT-5.4 | OpenAI | — | 120K | Full GPT |
 
-Conversation history persists across sessions and model switches. `history compact` summarizes the full conversation via Flash and replaces it with a concise summary — preserving context while freeing the context window. A unified `memory` command manages persistent facts across conversations. Token usage and per-model cost tracked in `history`.
+```
+ticker> model
+
+═══ MODELS ═══
+Type 'model' to list, 'model <name>' to switch.
+
+  ◆ flash        Gemini Flash              gemini-3-flash-preview         ✓
+    pro          Gemini Pro                gemini-3.1-pro-preview         ✓
+    haiku        Haiku 4.5                 claude-haiku-4-5-20251001      ✓
+    sonnet       Sonnet 4.6                claude-sonnet-4-6              ✓
+    opus         Opus 4.6                  claude-opus-4-6                ✓
+    gpt-mini     GPT-5.4 mini              gpt-5.4-mini                   ✓
+    gpt          GPT-5.4                   gpt-5.4                        ✓
+```
+
+### Context System
+
+The AI assistant has a layered context system — it knows who you are, what you're looking at, and what you've told it before.
+
+**Rolling terminal context** — Every time you send a message, the last 128 lines of terminal output are captured and appended to the system prompt. Run `pos` to view IBKR positions, `ta TSLA` to pull up technicals, or just glance at the thesis dashboard — then switch to chat and say "what do you think?" The AI already has everything on screen. The context refreshes on every message, so it always reflects what you were just looking at.
+
+**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, account snapshots (NLV, leverage, margin, P&L) from all configured accounts are fetched in parallel and injected too. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first.
+
+**Web search** — When the AI needs current information beyond what's in context, it searches the web automatically via Tavily (optimized for LLM consumption — returns clean extracted text, not raw HTML) with DuckDuckGo as a free fallback. No manual trigger required.
+
+### Memory
+
+Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all seven models share the same knowledge base.
+
+**Three ways to save:** `memory add <text>` from the command bar, `remember <text>` while in chat mode (direct, no API call), or just tell the AI conversationally — "remember that AAPL reports Jan 30" — and it saves automatically.
+
+**Deleting works the same way** — `memory delete 5` from the command bar, or tell the AI "forget memory 5" in conversation.
+
+**Compaction** — `memory compact` sends all stored memories through Gemini Flash, which distills them into a smaller set of consolidated facts. Useful when you've built up 20+ memories and want to keep the signal without the noise.
+
+```
+ticker> memory
+
+═══ MEMORIES ═══
+
+  #1  AAPL reports Jan 30, after hours                   2026-03-28
+  #2  Sold 200 MSFT at $420 for rebalancing              2026-03-26
+  #3  Earnings week — no new positions until Friday      2026-03-24
+  #4  TSLA support at $180, resistance at $210           2026-03-22
+
+memory <ID> (full text) · add <text> · delete <ID> · compact
+```
+
+### History
+
+Conversation history persists to disk across sessions and model switches. `history` shows a paginated view of past exchanges with per-model cost breakdown.
+
+```
+ticker> history
+
+═══ HISTORY (12 turns, page 1/2) ═══
+  Opus $0.03  Sonnet $0.01  Haiku $0.00  5.4 $0.00  5.4m $0.00  Gemini $0.02
+  ~8.2K tokens  ~$0.06
+
+  1  Q: what do you think about AMZN's setup going into earnings?
+     sonnet ▸ AMZN looks solid — RSI 52 is neutral, sitting right on the 50d...
+
+  2  Q: compare it to GOOGL
+     sonnet ▸ Both are mega-cap tech but with different growth drivers...
+
+history 2 · peek N · search <term> · delete N[-M] · compact · clear
+```
+
+`history search <term>` finds old conversations. `history delete 3` removes a single exchange. `history delete 6-10` removes a range.
+
+**Compaction** — `history compact` sends the full history through Gemini Flash, which produces a concise summary. The original messages are replaced with a single summary entry. The AI retains the knowledge without burning tokens re-reading 50 old exchanges.
+
+### Chain-of-Thought
+
+Models with thinking budgets (Gemini Pro, Claude Sonnet, Claude Opus) show their internal reasoning before responding. Toggle the display with `Ctrl+O` — when hidden, the thinking still happens (and improves the answer), it's just not printed.
+
+### Clipboard
+
+`copy` captures the current screen content to your system clipboard (macOS `pbcopy`, Linux `xclip`). `copy 20` for just the last 20 lines. Falls back to file export if no clipboard tool is available.
 
 ## Status Bar
 
-Static indices (S&P, Nasdaq, HSI, VIX, WTI, Brent, Gold, Silver, Natgas) + toggleable scrolling ticker tape with 18 symbols. Character-level scroll using Rich `Text` object slicing to preserve per-segment coloring. VIX and natgas color-coded by absolute level.
+Scrolling top bar with global indices (S&P, Nasdaq, HSI, VIX, WTI, Brent, Gold, Silver, Natgas) and local ET clock. Character-level scroll using Rich `Text` object slicing to preserve per-segment coloring. VIX and natgas color-coded by absolute level (green/yellow/red thresholds).
 
 ## IBKR Integration
 
 Multi-account MCP client — positions, account summary, P&L, margin impact calculator (buy/sell), what-if order analysis, today's executions. Per-account labels with gateway-down detection. Compact column formatting with currency filtering. Parallel context fetch for AI chat system prompt.
+
+What-if margin analysis uses IB's `OrderState` Before/After fields directly — not stale `accountSummary` deltas. Shows current state, post-trade estimate, and the margin impact in a single view. Handles both USD and CAD-listed securities with automatic exchange fallback.
 
 ## Stack
 
@@ -59,10 +148,10 @@ Multi-account MCP client — positions, account summary, P&L, margin impact calc
 - `google-genai` — Gemini chat with streaming and chain-of-thought
 - `anthropic` — Claude chat with extended thinking and tool use
 - `openai` — GPT chat with reasoning
-- `ddgs` — DuckDuckGo search (Claude web tool)
+- `tavily` — LLM-optimized web search (DDG fallback)
 - `mcp` — IBKR MCP client (streamable HTTP)
 - `httpx` — Async HTTP transport
-- `pytest` — 429 tests covering data layer, formatters, screens, MCP pipeline
+- `pytest` — 460 tests covering data layer, formatters, screens, chat, memory tags, MCP pipeline
 
 ## Demo
 
