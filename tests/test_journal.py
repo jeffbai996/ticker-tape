@@ -11,6 +11,7 @@ def tmp_journal(tmp_path, monkeypatch):
     """Redirect journal to a temp file for each test."""
     path = str(tmp_path / "journal.json")
     monkeypatch.setattr(journal, "JOURNAL_FILE", path)
+    monkeypatch.setattr(journal._store, "file_path", path)
     return path
 
 

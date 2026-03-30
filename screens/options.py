@@ -1,17 +1,9 @@
 """Options chain — pure formatting function."""
 
 import statistics
-import unicodedata
 
 from formatters import fmt_num
 from i18n import t
-
-
-def _dw(s: str) -> int:
-    """Display width accounting for CJK double-width characters."""
-    return sum(
-        2 if unicodedata.east_asian_width(c) in ("W", "F") else 1 for c in s
-    )
 
 
 def _fmt_leg(
