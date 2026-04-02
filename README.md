@@ -1,5 +1,5 @@
 # ticker_tape — Interactive CLI Trading Terminal
-*version 2.0.5*
+*version 2.1*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
