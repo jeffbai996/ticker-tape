@@ -53,12 +53,25 @@ class JsonStore:
         self.save(entries)
         return entry
 
+    def update(self, entry_id: int, fields: dict) -> bool:
+        """Update fields of an entry by ID. Returns True if found."""
+        entries = self.load()
+        for e in entries:
+            if e.get("id") == entry_id:
+                e.update(fields)
+                self.save(entries)
+                return True
+        return False
+
     def remove(self, entry_id: int) -> bool:
-        """Remove an entry by ID. Returns True if found."""
+        """Remove an entry by ID. Resequences remaining IDs."""
         entries = self.load()
         before = len(entries)
         entries = [e for e in entries if e.get("id") != entry_id]
         if len(entries) == before:
             return False
+        # Resequence IDs to stay contiguous (1, 2, 3, ...)
+        for i, e in enumerate(entries, 1):
+            e["id"] = i
         self.save(entries)
         return True
