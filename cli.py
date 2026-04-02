@@ -207,9 +207,9 @@ def cmd_insider(sym: str) -> None:
 def _ibkr_call(tool: str, fmt, title: str, arguments: dict | None = None) -> None:
     from ibkr_client import call_ibkr_tool
     from config import IBKR_ACCOUNTS
-    for url, label in IBKR_ACCOUNTS:
+    for url, label, acct in IBKR_ACCOUNTS:
         tag = f" ({label})" if label else ""
-        raw = call_ibkr_tool(tool, arguments, url=url)
+        raw = call_ibkr_tool(tool, arguments, url=url, account=acct)
         console.print(_title(f"{title}{tag}"))
         if raw:
             console.print(fmt(raw))
@@ -253,14 +253,14 @@ def cmd_ibkr_all() -> None:
     from ibkr_client import call_ibkr_tool
     from config import IBKR_ACCOUNTS
     from screens.ibkr_screen import format_positions, format_account, format_pnl
-    for url, label in IBKR_ACCOUNTS:
+    for url, label, acct in IBKR_ACCOUNTS:
         tag = f" ({label})" if label else ""
         for tool, fmt, name in [
             ("ibkr_get_positions", format_positions, "Positions"),
             ("ibkr_get_account_summary", format_account, "Account"),
             ("ibkr_get_account_pnl", format_pnl, "P&L"),
         ]:
-            raw = call_ibkr_tool(tool, url=url)
+            raw = call_ibkr_tool(tool, url=url, account=acct)
             console.print(_title(f"{name}{tag}"))
             if raw:
                 console.print(fmt(raw))
