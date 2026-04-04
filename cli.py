@@ -23,6 +23,7 @@ Market Data (yfinance):
     heatmap                 Portfolio heatmap
     calendar                Economic calendar
     insider <SYM>           Insider transactions
+    commodities             Commodity futures prices
 
 IBKR (needs MCP server):
     positions               Portfolio positions
@@ -201,6 +202,13 @@ def cmd_insider(sym: str) -> None:
     console.print(format_insider(data.fetch_insider(sym), sym))
 
 
+def cmd_commodities() -> None:
+    import data
+    from screens.commodities import format_commodities
+    console.print(_title("Commodities"))
+    console.print(format_commodities(data.fetch_commodities()))
+
+
 # ── IBKR commands (MCP) ────────────────────────────────────────
 
 
@@ -302,6 +310,7 @@ COMMANDS = {
     "heatmap": lambda a: cmd_heatmap(),
     "calendar": lambda a: cmd_calendar(),
     "insider": lambda a: cmd_insider(a[0].upper()) if a else _usage(),
+    "commodities": lambda a: cmd_commodities(),
     # ibkr
     "positions": lambda a: cmd_positions(),
     "account": lambda a: cmd_account(),
