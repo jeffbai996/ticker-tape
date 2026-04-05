@@ -67,13 +67,17 @@ Type 'model' to list, 'model <name>' to switch.
 
 ### Context System
 
-The AI assistant has a layered context system — it knows who you are, what you're looking at, and what you've told it before.
+The AI assistant has a layered context system — it knows who you are, what the market is doing, and what you've told it before.
 
-**Rolling terminal context** — Every time you send a message, the last 128 lines of terminal output are captured and appended to the system prompt. Run `pos` to view IBKR positions, `ta TSLA` to pull up technicals, or just glance at the thesis dashboard — then switch to chat and say "what do you think?" The AI already has everything on screen. The context refreshes on every message, so it always reflects what you were just looking at.
+**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, condensed account summaries (NLV, leverage, margin cushion, top holdings) from all configured accounts are fetched in parallel and injected. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first. Anthropic calls use prompt caching on the system block — the static persona and context are written once and read at 90% discount on subsequent turns.
 
-**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, account snapshots (NLV, leverage, margin, P&L) from all configured accounts are fetched in parallel and injected too. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first.
+**Slash commands** — Feed specific data to the AI mid-conversation: `/ta AAPL` runs technicals and injects the output, `/pos` pulls IBKR positions, `/acct` gets account summary. The AI analyzes the data in context.
 
 **Web search** — When the AI needs current information beyond what's in context, it searches the web automatically via Tavily (optimized for LLM consumption — returns clean extracted text, not raw HTML) with DuckDuckGo as a free fallback. No manual trigger required.
+
+### Image Input
+
+Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all seven models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual.
 
 ### Memory
 
