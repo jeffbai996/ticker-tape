@@ -63,6 +63,13 @@ class JsonStore:
                 return True
         return False
 
+    def clear(self) -> int:
+        """Remove all entries. Returns count removed."""
+        entries = self.load()
+        count = len(entries)
+        self.save([])
+        return count
+
     def remove(self, entry_id: int) -> bool:
         """Remove an entry by ID. Resequences remaining IDs."""
         entries = self.load()

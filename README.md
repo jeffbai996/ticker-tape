@@ -1,5 +1,5 @@
 # ticker_tape — Interactive CLI Trading Terminal
-*v2.1.2*
+*v2.2*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -126,36 +126,123 @@ history 2 · peek N · search <term> · delete N[-M] · compact · clear
 
 **Compaction** — `history compact` sends the full history through Gemini Flash, which produces a concise summary. The original messages are replaced with a single summary entry. The AI retains the knowledge without burning tokens re-reading 50 old exchanges.
 
-### Chain-of-Thought
+### Chain-of-Thought, Search & Token Usage
 
-Models with thinking budgets (Gemini Pro, Claude Sonnet, Claude Opus) show their internal reasoning before responding. Toggle the display with `Ctrl+O` — when hidden, the thinking still happens (and improves the answer), it's just not printed.
+Models with thinking budgets (Gemini Pro, Claude Sonnet, Claude Opus) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
+
+**Native web search** fires automatically when a model needs current information. Each provider uses its own search: Claude uses `web_search`, Gemini uses Google Search with grounding metadata, GPT uses the Responses API `web_search`. Search indicators appear inline during thinking. Citation markers are stripped from final output.
+
+**Token usage** displays input/output token counts, elapsed time, and per-model cost breakdown. Toggle with `Ctrl+T`. Anthropic calls use prompt caching on the system block — the static persona/context block is written once and read at 90% discount on subsequent turns. Cache hits are tracked per call.
+
+A random thinking placeholder (from a pool of ~80 words including "Catfishing", "Moonwalking", "Glazing") shows while waiting for the first token.
+
+```
+Q: what's happening with the TSMC arizona fab timeline?
+Moonwalking...
+Analyzing the Request
+    The user is asking about TSMC's Arizona fab construction
+    timeline. I should search for the latest updates on the
+    N4P process node ramp and any delays or policy changes.
+Searching the Web
+    🔍 Searching: "TSMC Arizona fab timeline 2026"
+    🔍 Searching: "TSMC N4P production ramp update"
+Synthesizing
+    The latest reports confirm first silicon on the N4P node
+    ahead of schedule. This is significant for the domestic
+    semiconductor supply chain buildout...
+
+A:
+TSMC's Arizona Fab 1 hit first silicon on the N4P node two weeks
+ahead of the revised schedule. Yield rates are tracking at 92%,
+which is competitive with Tainan. Fab 2 (N3E) broke ground last
+month with a 2028 target. The CHIPS Act second tranche disbursed
+$2.1B in March, removing the funding overhang.
+
+┌───────────────────────────┐
+│ ↑ 3,156t  ↓ 809t  ⏱ 10.4s │
+└───────────────────────────┘
+```
+
+### Journal & Resume
+
+`journal save [N]` captures the last N chat exchanges losslessly to a persistent journal — useful for archiving analysis or trade rationale. `journal` lists saved entries with timestamps.
+
+`resume` replays the tail of chat history (~3000 chars) with full markdown rendering, so you can pick up where you left off after restarting.
+
+### Auto News Context
+
+Mentioning a watchlist ticker in chat automatically fetches its recent headlines and injects them into the AI's context. No manual `/news` command needed — just say "what do you think about AAPL" and the model sees the latest headlines alongside its market data.
 
 ### Clipboard
 
-`copy` captures the current screen content to your system clipboard (macOS `pbcopy`, Linux `xclip`). `copy 20` for just the last 20 lines. Falls back to file export if no clipboard tool is available.
+`copy` captures the current screen content to your system clipboard (macOS `pbcopy`, Linux `xclip`, WSL `clip.exe`). `copy 20` for just the last 20 lines. Falls back to file export if no clipboard tool is available.
+
+### Keyboard Shortcuts
+
+| Key | Context | Action |
+|-----|---------|--------|
+| `Ctrl+O` | Chat | Toggle chain-of-thought display |
+| `Ctrl+T` | Chat | Toggle token usage box |
+| `Ctrl+P` | Chat | Paste clipboard image (macOS) |
+| `Ctrl+N` | Chat | New line in input |
+| `c` | Ticker | Toggle compact mode |
+| `l` | Ticker | Switch language (en/zh) |
 
 ## Status Bar
 
-Scrolling top bar with global indices (S&P, Nasdaq, HSI, VIX, WTI, Brent, Gold, Silver, Natgas) and local ET clock. Character-level scroll using Rich `Text` object slicing to preserve per-segment coloring. VIX and natgas color-coded by absolute level (green/yellow/red thresholds).
+Scrolling top bar with global indices (S&P, Nasdaq, HSI, VIX, WTI, Brent, Gold, Silver, Natgas) and local ET clock. Character-level scroll using Rich `Text` object slicing to preserve per-segment coloring. Off-hours swaps to futures tickers (ES=F, NQ=F). VIX and natgas color-coded by absolute level (green/yellow/red thresholds). NYSE holiday detection with orange "HOLIDAY" tag.
+
+## Sidebar
+
+Real-time watchlist quotes with refresh flash indicator. IBKR P&L section (daily/unrealized/realized aggregated across accounts, 30s refresh). Risk section (cushion, leverage, NLV from primary account, 60s refresh) with color-coded thresholds. Earnings calendar in the Pulse section.
 
 ## IBKR Integration
 
-Multi-account MCP client — positions, account summary, P&L, margin impact calculator (buy/sell), what-if order analysis, today's executions. Per-account labels with gateway-down detection. Compact column formatting with currency filtering. Parallel context fetch for AI chat system prompt.
+Multi-account MCP client over streamable HTTP. Two accounts on the same or separate IB Gateways, configured via environment variables. Per-account labels with gateway-down detection. Compact column formatting with automatic currency filtering (USD/CAD).
 
-What-if margin analysis uses IB's `OrderState` Before/After fields directly — not stale `accountSummary` deltas. Shows current state, post-trade estimate, and the margin impact in a single view. Handles both USD and CAD-listed securities with automatic exchange fallback.
+| Command | What it shows |
+|---------|--------------|
+| `/pos` | Positions table with cost basis, P&L, weights, daily P&L summary |
+| `/acct` | Account health: NLV, margin, buying power, cushion, leverage |
+| `/pnl` | Daily/unrealized/realized P&L with daily return % |
+| `/risk` | Full risk dashboard: health, concentration, alerts, VaR |
+| `/trades` | Today's executions grouped by symbol, VWAP, commissions |
+| `/orders` | Open/pending orders |
+| `/detail SYM` | Single position deep dive: cost, weight, P&L, margin, performance |
+| `/margin` | Margin summary, `/margin SYM` headroom, `/margin SYM QTY` what-if |
+| `/stress` | Stress test: preflight, drawdown curve, overnight gap risk |
+| `/beta` | Portfolio beta vs SPY with per-position breakdown |
+| `/corr` | Pairwise correlation matrix |
+| `/sector` | Sector exposure breakdown with HHI |
+| `/ibkr` | Consolidated cross-account view with FX conversion |
+
+```
+═══ POSITIONS (U12345678) ═══  14:32:05 ET
+
+         Shares      Cost     Price         Value            P&L    Wt%
+─────────────────────────────────────────────────────────────────────
+ AAPL       500 $  185.20 $  198.45   $99,225.00   +$6,625.00   28.3%
+ MSFT       300 $  378.50 $  412.30  $123,690.00  +$10,140.00   25.1%
+ GOOGL      400 $  155.80 $  168.92   $67,568.00   +$5,248.00   19.4%
+ AMZN       250 $  178.40 $  192.15   $48,037.50   +$3,437.50   13.7%
+
+ Total Market Value             $350,482.50 USD
+ Daily P&L                      +$2,841.20
+ Daily P&L %                    +0.82%
+```
 
 ## Stack
 
 - `textual` — TUI framework, reactive properties, CSS styling
 - `rich` — Markup rendering, Text objects for scrolling tape
 - `yfinance` — Market data, technicals, earnings, insider transactions
-- `google-genai` — Gemini chat with streaming and chain-of-thought
-- `anthropic` — Claude chat with extended thinking and tool use
-- `openai` — GPT chat with reasoning
-- `tavily` — LLM-optimized web search (DDG fallback)
-- `mcp` — IBKR MCP client (streamable HTTP)
+- `google-genai` — Gemini chat with streaming, chain-of-thought, Google Search, code execution
+- `anthropic` — Claude chat with extended thinking, web search, code execution, prompt caching
+- `openai` — GPT chat with Responses API web search
+- `tavily` — LLM-optimized web search fallback (DDG as secondary fallback)
+- `mcp` — IBKR MCP client (streamable HTTP, multi-account)
 - `httpx` — Async HTTP transport
-- `pytest` — 500 tests covering data layer, formatters, screens, chat, journal, memory tags, MCP pipeline
+- `pytest` — 525 tests covering data layer, formatters, screens, chat, journal, memory tags, MCP pipeline
 
 ## Demo
 
