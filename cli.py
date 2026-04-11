@@ -29,7 +29,7 @@ IBKR (needs MCP server):
     positions               Portfolio positions
     account                 Account summary
     pnl                     Daily P&L
-    trades                  Trade history
+    trades [N]              Trade history (N = days back, max 7)
     ibkr                    All IBKR data (positions + account + P&L)
     margin <SYM> <QTY>      Margin simulation
     whatif <SYM> <QTY>      What-if order analysis
@@ -240,9 +240,11 @@ def cmd_pnl() -> None:
     _ibkr_call("ibkr_get_account_pnl", format_pnl, "P&L")
 
 
-def cmd_trades() -> None:
+def cmd_trades(days: int = 0) -> None:
     from screens.ibkr_screen import format_trades
-    _ibkr_call("ibkr_trades", format_trades, "Trades")
+    args = {"params": {"view": "journal", "days_back": days}} if days else None
+    title = f"Trades ({days}d)" if days else "Trades"
+    _ibkr_call("ibkr_trades", format_trades, title, arguments=args)
 
 
 def cmd_margin(sym: str, qty: int) -> None:
@@ -315,7 +317,7 @@ COMMANDS = {
     "positions": lambda a: cmd_positions(),
     "account": lambda a: cmd_account(),
     "pnl": lambda a: cmd_pnl(),
-    "trades": lambda a: cmd_trades(),
+    "trades": lambda a: cmd_trades(int(a[0]) if a else 0),
     "ibkr": lambda a: cmd_ibkr_all(),
     "margin": lambda a: cmd_margin(a[0].upper(), int(a[1])) if len(a) >= 2 else _usage(),
     "whatif": lambda a: cmd_whatif(a[0].upper(), int(a[1])) if len(a) >= 2 else _usage(),
