@@ -1,5 +1,5 @@
 # ticker_tape — Interactive CLI Trading Terminal
-*v2.3*
+*v2.4*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -173,6 +173,24 @@ $2.1B in March, removing the funding overhang.
 
 Mentioning a watchlist ticker in chat automatically fetches its recent headlines and injects them into the AI's context. No manual `/news` command needed — just say "what do you think about AAPL" and the model sees the latest headlines alongside its market data.
 
+### AI Tool Use
+
+The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "show my positions" and it calls `ibkr_get_positions()` to pull live portfolio data.
+
+| Tool | What It Fetches |
+|------|----------------|
+| `get_technicals` | RSI, SMA, MACD, Bollinger, ATR, volume ratio |
+| `get_news` | Recent headlines with age |
+| `get_fundamentals` | P/E, margins, growth, market cap |
+| `get_chart` | Price history (configurable period/interval) |
+| `get_intraday` | Today's 5-min bars with VWAP |
+| `ibkr_get_positions` | Portfolio positions with P&L |
+| `ibkr_get_account_summary` | Account NLV, margin, buying power |
+| `ibkr_briefing` | Risk dashboard with margin metrics |
+| `ibkr_stress_test` | Stress test under configurable scenarios |
+
+Tools are defined once in a provider-agnostic registry and translated to each provider's native format (Anthropic tool_use, Gemini function_declarations, OpenAI function tools). Execution is local — the model requests a tool, ticker-tape runs it in Python, feeds the result back, and the model continues with analysis. Works across all seven models.
+
 ### Clipboard
 
 `copy` captures the current screen content to your system clipboard (macOS `pbcopy`, Linux `xclip`, WSL `clip.exe`). `copy 20` for just the last 20 lines. Falls back to file export if no clipboard tool is available.
@@ -242,7 +260,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `tavily` — LLM-optimized web search fallback (DDG as secondary fallback)
 - `mcp` — IBKR MCP client (streamable HTTP, multi-account)
 - `httpx` — Async HTTP transport
-- `pytest` — 525 tests covering data layer, formatters, screens, chat, journal, memory tags, MCP pipeline
+- `pytest` — 529 tests covering data layer, formatters, screens, chat, tool registry, journal, memory tags, MCP pipeline
 
 ## Demo
 
