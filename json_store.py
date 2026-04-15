@@ -1,4 +1,9 @@
-"""Shared JSON list persistence — used by memory and journal modules."""
+"""Shared JSON list persistence — used by memory and journal modules.
+
+Includes a simple memoization layer: load() caches the parsed result
+in memory so repeated reads (e.g. search_entries calling load_entries)
+skip disk I/O. The cache is invalidated on every write operation.
+"""
 
 import json
 import logging
@@ -12,16 +17,34 @@ class JsonStore:
     """Persistent list-of-dicts store with auto-incrementing IDs."""
 
     def __init__(self, file_path: str, max_entries: int) -> None:
-        self.file_path = file_path
+        self._file_path = file_path
         self.max_entries = max_entries
+        self._cache: list[dict] | None = None
+
+    @property
+    def file_path(self) -> str:
+        return self._file_path
+
+    @file_path.setter
+    def file_path(self, value: str) -> None:
+        self._file_path = value
+        self._cache = None  # invalidate on path change (tests use monkeypatch)
+
+    def _invalidate(self) -> None:
+        """Clear the in-memory cache so next load() reads from disk."""
+        self._cache = None
 
     def load(self) -> list[dict]:
+        if self._cache is not None:
+            return list(self._cache)  # return copy to prevent mutation
         if not os.path.exists(self.file_path):
             return []
         try:
             with open(self.file_path, "r") as f:
                 data = json.load(f)
-            return data if isinstance(data, list) else []
+            result = data if isinstance(data, list) else []
+            self._cache = result
+            return list(result)
         except (json.JSONDecodeError, OSError) as e:
             log.warning("Failed to load %s: %s", self.file_path, e)
             return []
@@ -31,8 +54,10 @@ class JsonStore:
         try:
             with open(self.file_path, "w") as f:
                 json.dump(entries, f, indent=2)
+            self._cache = entries  # update cache with what we just wrote
         except OSError as e:
             log.warning("Failed to save %s: %s", self.file_path, e)
+            self._invalidate()  # disk write failed — cache is stale
 
     def next_id(self, entries: list[dict]) -> int:
         if not entries:
