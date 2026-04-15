@@ -1,5 +1,5 @@
 # ticker_tape — Interactive CLI Trading Terminal
-*v2.5.0*
+*v2.5.1*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -16,7 +16,11 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 **Cache**: 30-second TTL on `.info` calls — eliminates redundant yfinance requests across sidebar, thesis, and lookup views
 **Compact mode**: Toggle with `c` — two-line-per-symbol view with sparklines, earnings, technicals, and sidebar watchlist. Auto-enables on narrow terminals
 **Watchlist groups**: Named symbol groups with sidebar headers, synced to thesis buckets at runtime
-**Alerts**: Price-level alerts with fire-once trigger and auto-removal
+**Alerts**: Smart alerts — price levels, RSI thresholds, SMA crossovers, volume spikes, margin cushion. Fire-once trigger with auto-removal. Technical alerts on 60s eval cycle
+**NLV History**: SQLite-backed NLV snapshots every 60s via peewee ORM (WAL mode). `timeline` shows 90-day ASCII chart with drawdown and leverage trend
+**Morning Briefing**: `brief` assembles portfolio health, macro context (7 indicators), watchlist movers, upcoming earnings. `brief ai` adds AI synthesis
+**Position Sizing**: `size SYM QTY` runs IBKR what-if with concentration and cushion analysis
+**Earnings Tracker**: `surprises` shows watchlist-wide EPS beat/miss history with persistence to SQLite
 **i18n**: Full English/Chinese with ~230 translation keys
 
 ## Screens
@@ -35,6 +39,10 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 | **Correlation** | NxN correlation matrix across watchlist, color-coded by strength, avg pairwise metric |
 | **Comparison** | Side-by-side multi-symbol performance comparison |
 | **Screening** | Quick multi-symbol comparison table for filtering ideas |
+| **Timeline** | 90-day NLV ASCII chart with drawdown from peak, leverage trend, cushion |
+| **Surprises** | Watchlist-wide earnings surprise history: EPS beat/miss, price reaction, streaks |
+| **Sizing** | Pre-trade what-if: margin impact, concentration weight, cushion before/after |
+| **Briefing** | Morning briefing: portfolio health, macro (7 indicators), movers, earnings this week |
 
 ## AI Chat
 
@@ -188,6 +196,9 @@ The AI can call ticker-tape functions directly when you ask about specific data 
 | `ibkr_get_account_summary` | Account NLV, margin, buying power |
 | `ibkr_briefing` | Risk dashboard with margin metrics |
 | `ibkr_stress_test` | Stress test under configurable scenarios |
+| `ibkr_what_if` | Simulate trade: margin impact, cushion change |
+| `get_earnings_surprises` | Historical EPS beat/miss across watchlist |
+| `get_briefing` | Morning briefing: portfolio, macro, movers, earnings |
 
 Tools are defined once in a provider-agnostic registry and translated to each provider's native format (Anthropic tool_use, Gemini function_declarations, OpenAI function tools). Execution is local — the model requests a tool, ticker-tape runs it in Python, feeds the result back, and the model continues with analysis. Works across all seven models.
 
@@ -260,7 +271,8 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `tavily` — LLM-optimized web search fallback (DDG as secondary fallback)
 - `mcp` — IBKR MCP client (streamable HTTP, multi-account)
 - `httpx` — Async HTTP transport
-- `pytest` — 529 tests covering data layer, formatters, screens, chat, tool registry, journal, memory tags, MCP pipeline
+- `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
+- `pytest` — 584 tests covering data layer, formatters, screens, chat, tool registry, journal, memory tags, MCP pipeline, smart alerts, db persistence
 
 ## Demo
 
