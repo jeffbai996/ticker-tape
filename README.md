@@ -1,5 +1,5 @@
-# ticker_tape — Interactive CLI Trading Terminal
-*v2.5.1*
+# ticker-tape — Interactive CLI Trading Terminal
+*v2.5.2*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -272,7 +272,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `mcp` — IBKR MCP client (streamable HTTP, multi-account)
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
-- `pytest` — 584 tests covering data layer, formatters, screens, chat, tool registry, journal, memory tags, MCP pipeline, smart alerts, db persistence
+- `pytest` — 593 tests covering data layer, formatters, screens, chat, tool registry, journal, memory tags, MCP pipeline, smart alerts, db persistence
 
 ## Demo
 
@@ -286,3 +286,47 @@ Fully integrated Chinese language support with CJK-aware column alignment.
   <img src="assets/dashboard-en.png" width="49%" />
   <img src="assets/dashboard-zh.png" width="49%" />
 </p>
+
+## Changelog
+
+**v2.5.2** (2026-04-15) — System prompt overhaul with precise thesis context, geopolitical standing context, tool-use synthesis instruction. Fixed token counting in Gemini/Claude re-call loops (was showing initial turn tokens, not final response). Fixed Gemini thinking leak in tool re-call. Column spacing tuned for thesis view.
+
+**v2.5.1** (2026-04-15) — Smart alerts (price, RSI, SMA crossover, volume spike, margin cushion). NLV timeline with 90-day ASCII chart. Earnings surprise tracker. Morning briefing with AI synthesis. Position sizing what-if. Market context (3 rows: indices, commodities, yields). JsonStore memoization (~25x faster reads). 3 new AI tools. FX pairs in consolidated view.
+
+**v2.4.2** (2026-04-13) — Grouped tool indicators, compact tool results, dead code removal.
+
+**v2.4.1** (2026-04-13) — Pricing display, cost basis columns, tool UX improvements, SIGINT fix.
+
+**v2.4** (2026-04-13) — AI tool use (12 functions across 3 providers), consolidated IBKR view, `/detail` command, historical trades.
+
+**v2.3** (2026-04-09) — IBKR refactor, NaN handling, consistent box widths, screening view.
+
+**v2.2** (2026-04-07) — IBKR overhaul with risk sidebar, slash commands for portfolio data, screening view, README refresh.
+
+**v2.1** (2026-04-02) — Compact mode with sparklines/earnings/gold/breadth. Watchlist groups. Memory edit via AI. Margin dashboard. Trade grouping. Multi-account IBKR. Commodities screen. NYSE holiday detection. Chat help menu. Resume command. Image input (Ctrl+P). Prompt caching on Anthropic. GPT native search. Gemini code execution. History/memory compaction.
+
+**v2.0.5** (2026-03-29) — Chat memory tools, multi-line paste, history ranges, system prompt update.
+
+**v2.0.4** (2026-03-29) — Memory/history consolidation, history compact, Haiku/Opus pricing fix.
+
+**v2.0.3** (2026-03-27) — IBKR formatting, compact mode, AI screen context injection.
+
+**v2.0.2** (2026-03-26) — IBKR formatting fixes, what-if sell, history display improvements.
+
+**v2.0.1** (2026-03-26) — Options chain, correlation matrix, watchlist groups, live alerts, earnings upgrade. Tavily search, GPT search, Gemini code execution. Token/cost tracker.
+
+**v2.0** (2026-03-25) — Textual rewrite from scratch. 368 tests. Thesis-driven portfolio view, heatmap, technicals, intraday, lookup, earnings, economic calendar screens. Status bar with scrolling indices. Full i18n (EN/ZH, ~250 keys). Shared memory system. Multi-model AI chat (7 models, 3 providers). Streaming with paragraph-level flush. IBKR multi-account integration via MCP.
+
+**v1.5** (2026-03-17) — Multi-model AI chat with 7 providers. Streaming paragraph-level flush. Shared memory system across all models. i18n with ~250 translation keys (EN/ZH).
+
+**v1.4** (2026-03-15) — IBKR multi-account integration via MCP streamable HTTP. Economic calendar (FOMC, CPI, NFP, GDP, PCE). Price alerts and watchlist persistence.
+
+**v1.3** (2026-03-11) — Earnings impact analysis and valuation screen. Sector heatmap and insider tracking. Intraday price action with VWAP.
+
+**v1.2** (2026-03-07) — Technicals (MACD, RSI, Bollinger Bands, ATR). Charts and side-by-side comparison. Command bar with ~40 aliases.
+
+**v1.1** (2026-03-03) — Scrolling ticker tape widget. Status bar with market state and indices. Sidebar with sparklines and pulse metrics. Sectors, earnings, news screens.
+
+**v1.0** (2026-02-25) — Thesis dashboard with 52w range bars. Stock lookup with key stats. Market overview screen.
+
+**v0.1** (2026-02-19) — Project scaffolding. Textual app shell. yfinance data layer with TTL caching. Rich markup formatters.
