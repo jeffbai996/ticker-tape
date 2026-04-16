@@ -3,6 +3,45 @@
 from i18n import t
 
 
+# Column visible widths. Every markup-wrapped value MUST render to exactly
+# this many cells, otherwise downstream columns drift.
+_W_SYM   = 6
+_W_DSIGN = 2   # "$" or "-$" column (sign leads the dollar, not the digit)
+_W_EPS   = 6   # e.g. "12.20", "0.09", "1,234"  (no sign, no $ — handled in _W_DSIGN)
+_W_SURP  = 7   # e.g. "+75.0%"
+_W_MOVE  = 7
+_W_STRK  = 3
+_W_RATE  = 4   # "100%" or " 75%"
+_W_DETL  = 6   # "(3/4)" or "(4/4)"
+_W_AVG   = 7
+
+
+def _eps_cells(eps: float | None) -> tuple[str, str]:
+    """Return (sign_col, number_col) both right-justified to their widths.
+
+    Sign col shows '$' for positive, '-$' for negative, '  ' for missing.
+    Number col shows the unsigned value or '—' when missing.
+    """
+    if eps is None:
+        return f"{'':>{_W_DSIGN}}", f"{'—':>{_W_EPS}}"
+    if eps < 0:
+        sign = "-$"
+        num = f"{abs(eps):.2f}"
+    else:
+        sign = "$"
+        num = f"{eps:.2f}"
+    return f"{sign:>{_W_DSIGN}}", f"{num:>{_W_EPS}}"
+
+
+def _pct_cell(val: float | None, width: int) -> str:
+    """Colored percentage in a fixed visible width. Negative zeros rounded out."""
+    if val is None:
+        return f"[dim]{'—':>{width}}[/]"
+    raw = f"{val:+.1f}%"            # e.g. "+75.0%" — visible cells = len(raw)
+    color = "green" if val > 0 else "#ff3232" if val < 0 else "dim"
+    return f"[{color}]{raw:>{width}}[/]"
+
+
 def format_surprises(data: dict) -> str:
     """Format watchlist-wide earnings surprise data.
 
@@ -16,19 +55,22 @@ def format_surprises(data: dict) -> str:
     if not symbols:
         return f"[dim]{t('surprises.empty')}[/]"
 
-    # Header
-    lines = []
+    # Header — visible widths mirror the row layout exactly.
+    # EPS spans sign_col + 1 space + num_col so the header label "Last EPS"
+    # is right-justified across that combined width.
+    eps_hdr_width = _W_DSIGN + 1 + _W_EPS
     hdr = (
-        f"  [bold #00c8ff]{'Symbol':<7}[/]"
-        f"[bold #00c8ff]{'Last EPS':>9}[/]"
-        f"[bold #00c8ff]{'Surprise':>10}[/]"
-        f"[bold #00c8ff]{'Move':>8}[/]"
-        f"[bold #00c8ff]{'Streak':>8}[/]"
-        f"[bold #00c8ff]{'Beat %':>8}[/]"
-        f"[bold #00c8ff]{'Avg Move':>9}[/]"
+        f"  [bold #00c8ff]{'Symbol':<{_W_SYM}} "
+        f"{'Last EPS':>{eps_hdr_width}} "
+        f"{'Surprise':>{_W_SURP}} "
+        f"{'Move':>{_W_MOVE}} "
+        f"{'Streak':>{_W_STRK}} "
+        f"{'Beat %':>{_W_RATE}} {'':<{_W_DETL}} "
+        f"{'Avg Move':>{_W_AVG}}[/]"
     )
-    lines.append(hdr)
-    lines.append(f"  [dim]{'─' * 59}[/]")
+    lines = [hdr]
+    total_w = _W_SYM + 1 + eps_hdr_width + 1 + _W_SURP + 1 + _W_MOVE + 1 + _W_STRK + 1 + _W_RATE + 1 + _W_DETL + 1 + _W_AVG
+    lines.append(f"  [dim]{'─' * total_w}[/]")
 
     # Sort by beat rate descending, then by symbol
     sorted_syms = sorted(
@@ -40,57 +82,40 @@ def format_surprises(data: dict) -> str:
     for sym, info in sorted_syms:
         s = info["summary"]
 
-        # Last EPS
-        eps_str = f"${s['last_eps']:.2f}" if s.get("last_eps") is not None else "—"
+        dsign, eps_num = _eps_cells(s.get("last_eps"))
+        surp = _pct_cell(s.get("last_surprise"), _W_SURP)
+        move = _pct_cell(s.get("last_move"), _W_MOVE)
 
-        # Last surprise %
-        if s.get("last_surprise") is not None:
-            sc = "green" if s["last_surprise"] > 0 else "#ff3232"
-            surp_str = f"[{sc}]{s['last_surprise']:+.1f}%[/]"
-        else:
-            surp_str = "[dim]—[/]"
-
-        # Last price move
-        if s.get("last_move") is not None:
-            mc = "green" if s["last_move"] > 0 else "#ff3232"
-            move_str = f"[{mc}]{s['last_move']:+.1f}%[/]"
-        else:
-            move_str = "[dim]—[/]"
-
-        # Beat streak
         streak = s.get("beat_streak", 0)
-        streak_str = f"[green]{streak}[/]" if streak > 0 else "[dim]0[/]"
+        strk_raw = f"{streak}"
+        strk = (f"[green]{strk_raw:>{_W_STRK}}[/]" if streak > 0
+                else f"[dim]{strk_raw:>{_W_STRK}}[/]")
 
-        # Beat rate
+        # Beat % + detail — treat as two adjacent fixed-width columns.
         if s.get("beat_rate") is not None:
             br = s["beat_rate"] * 100
             bc = "green" if br >= 75 else "#ffc800" if br >= 50 else "#ff3232"
-            rate_str = f"[{bc}]{br:.0f}%[/]"
-            rate_detail = f" [dim]({s['beats']}/{s['total']})[/]"
+            rate_raw = f"{br:.0f}%"
+            rate = f"[{bc}]{rate_raw:>{_W_RATE}}[/]"
+            detl_raw = f"({s['beats']}/{s['total']})"
+            detl = f"[dim]{detl_raw:<{_W_DETL}}[/]"
         else:
-            rate_str = "[dim]—[/]"
-            rate_detail = ""
+            rate = f"[dim]{'—':>{_W_RATE}}[/]"
+            detl = f"[dim]{'':<{_W_DETL}}[/]"
 
-        # Avg move
-        if s.get("avg_move") is not None:
-            ac = "green" if s["avg_move"] > 0 else "#ff3232"
-            avg_str = f"[{ac}]{s['avg_move']:+.1f}%[/]"
-        else:
-            avg_str = "[dim]—[/]"
+        avg = _pct_cell(s.get("avg_move"), _W_AVG)
 
         lines.append(
-            f"  [bold #ffc800]{sym:<7}[/]"
-            f"{eps_str:>9}"
-            f"{surp_str:>20}"  # extra width for markup
-            f"{move_str:>18}"
-            f"{streak_str:>18}"
-            f"{rate_str:>18}{rate_detail}"
-            f"{avg_str:>18}"
+            f"  [bold #ffc800]{sym:<{_W_SYM}}[/] "
+            f"[dim]{dsign}[/] [white]{eps_num}[/] "
+            f"{surp} {move} {strk} "
+            f"{rate} {detl} "
+            f"{avg}"
         )
 
     # Watchlist summary
     ws = data.get("watchlist_summary", {})
-    lines.append(f"\n  [dim]{'─' * 59}[/]")
+    lines.append(f"\n  [dim]{'─' * total_w}[/]")
     parts = []
     if ws.get("avg_beat_rate") is not None:
         parts.append(f"Beat rate: {ws['avg_beat_rate']*100:.0f}% ({ws['total_beats']}/{ws['total_total']})")

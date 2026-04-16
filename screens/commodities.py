@@ -34,7 +34,7 @@ def format_commodities(data: dict) -> str:
             if item.get("stale"):
                 lines.append(
                     f"[bold #ffc800]{sym:<8}[/]"
-                    f"[dim]{name:<18}[/]"
+                    f"[dim]{name:<15}[/]"
                     f"[dim]{'—':>12}[/]  "
                     f"[dim]{unit:<10}[/]  "
                     f"[dim]N/A[/]"
@@ -45,7 +45,7 @@ def format_commodities(data: dict) -> str:
                 arrow = "▲" if item["pct"] >= 0 else "▼"
                 lines.append(
                     f"[bold #ffc800]{sym:<8}[/]"
-                    f"[dim]{name:<18}[/]"
+                    f"[dim]{name:<15}[/]"
                     f"[white]{price_str:>12}[/]  "
                     f"[dim]{unit:<10}[/]  "
                     f"[{color}]{arrow} {item['pct']:+.2f}%[/]"
