@@ -41,19 +41,19 @@ def format_sizing(
     lines = []
 
     # ── Section 1: Trade Summary ──
-    lines.append(f"  [bold white]{symbol}[/]  [dim]×[/] [white]{quantity:,}[/] shares\n")
+    lines.append(f"  [bold white]{symbol}[/]  [dim]×[/] [white]{quantity:,}[/] {t('sizing.shares')}\n")
 
     # ── Section 2: Margin Impact (from ibkr_what_if) ──
     if whatif_raw:
         lines.append(f"  [bold #00c8ff]{t('sizing.margin_impact')}[/]")
         kv = _parse_kv(whatif_raw)
         for key_pattern, label in [
-            ("init", "Init Margin"),
-            ("maint", "Maint Margin"),
-            ("equity_with_loan", "Equity w/ Loan"),
-            ("cushion", "Cushion"),
-            ("change", "Margin Change"),
-            ("buying_power", "Buying Power"),
+            ("init", t("sizing.init_margin")),
+            ("maint", t("sizing.maint_margin")),
+            ("equity_with_loan", t("sizing.equity_loan")),
+            ("cushion", t("sizing.cushion_label")),
+            ("change", t("sizing.margin_change")),
+            ("buying_power", t("sizing.buying_power")),
         ]:
             for k, v in kv.items():
                 if key_pattern in k and v != "N/A":
@@ -89,9 +89,9 @@ def format_sizing(
                     break
 
         if nlv and nlv > 0:
-            lines.append(f"    [dim]{'NLV':<16}[/] [white]${nlv:,.0f}[/]")
+            lines.append(f"    [dim]{t('sizing.nlv'):<16}[/] [white]${nlv:,.0f}[/]")
             if existing_weight is not None:
-                lines.append(f"    [dim]{'Current Wt':<16}[/] [white]{existing_weight:.1f}%[/]")
+                lines.append(f"    [dim]{t('sizing.current_wt'):<16}[/] [white]{existing_weight:.1f}%[/]")
         lines.append("")
 
     # ── Section 4: Cushion Before/After ──
@@ -114,9 +114,9 @@ def format_sizing(
             lines.append(f"  [bold #00c8ff]{t('sizing.cushion_impact')}[/]")
             if before is not None:
                 bc = "#ff3232" if before < 10 else "#ffc800" if before < 15 else "green"
-                lines.append(f"    [dim]{'Before':<16}[/] [{bc}]{before:.1f}%[/]")
+                lines.append(f"    [dim]{t('sizing.before'):<16}[/] [{bc}]{before:.1f}%[/]")
             if after is not None:
                 ac = "#ff3232" if after < 10 else "#ffc800" if after < 15 else "green"
-                lines.append(f"    [dim]{'After':<16}[/] [{ac}]{after:.1f}%[/]")
+                lines.append(f"    [dim]{t('sizing.after'):<16}[/] [{ac}]{after:.1f}%[/]")
 
     return "\n".join(lines)
