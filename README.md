@@ -1,5 +1,5 @@
 # ticker-tape — Interactive CLI Trading Terminal
-*v2.5.3*
+*v2.5.4*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -18,10 +18,10 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 **Watchlist groups**: Named symbol groups with sidebar headers, synced to thesis buckets at runtime
 **Alerts**: Smart alerts — price levels, RSI thresholds, SMA crossovers, volume spikes, margin cushion. Fire-once trigger with auto-removal. Technical alerts on 60s eval cycle
 **NLV History**: SQLite-backed NLV snapshots every 60s via peewee ORM (WAL mode). `timeline` shows 90-day ASCII chart with drawdown and leverage trend
-**Morning Briefing**: `brief` assembles portfolio health, macro context (7 indicators), watchlist movers, upcoming earnings. `brief ai` adds AI synthesis
+**Morning Briefing**: `brief` assembles portfolio health, macro context (10 indicators — DXY, 10Y, BTC included), watchlist movers, sector snapshot, news headlines per top mover, upcoming earnings with EPS estimates. `brief ai` adds AI synthesis
 **Position Sizing**: `size SYM QTY` runs IBKR what-if with concentration and cushion analysis
 **Earnings Tracker**: `surprises` shows watchlist-wide EPS beat/miss history with persistence to SQLite
-**i18n**: Full English/Chinese with ~230 translation keys
+**i18n**: Full English/Chinese with 500+ translation keys, CJK-aware column padding via `pad()`
 
 ## Screens
 
@@ -288,6 +288,10 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v2.5.4** (2026-04-16) — i18n polish: briefing portfolio/macro/movers/earnings labels, IBKR account summary labels, and chat help menu all now translate (30+ new keys). CJK-aware column padding via `pad()` so Chinese labels preserve visual alignment. README changelog caught up.
+
+**v2.5.3** (2026-04-15) — IBKR view polish (P&L formatting consistent across all views, `+1,234.56` no `$`, 2-space left pad on consolidated). Account summary adds excess liquidity + buying power; CAD/CNY FX pair. Morning briefing expanded to 40-60 lines with news headlines per top mover, sector snapshot, 10-indicator macro (DXY, 10Y, BTC added), EPS estimates on earnings. Status bar CJK fix — cell-aware slicing via `unicodedata.east_asian_width()` so Chinese chars (金 etc.) don't get cut off in scrolling tape. 30+ new i18n keys covering thesis indicators, impact screen, sizing, memories, history, chat shortcuts, journal. SOX dropped from compact bar to keep gold visible in Chinese mode.
 
 **v2.5.2** (2026-04-15) — System prompt overhaul with precise thesis context, geopolitical standing context, tool-use synthesis instruction. Fixed token counting in Gemini/Claude re-call loops (was showing initial turn tokens, not final response). Fixed Gemini thinking leak in tool re-call. Column spacing tuned for thesis view.
 

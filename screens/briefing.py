@@ -1,5 +1,6 @@
 """Morning briefing screen — portfolio health, movers, earnings, macro context, news, sectors."""
 
+from formatters import pad
 from i18n import t
 
 
@@ -32,7 +33,7 @@ def format_briefing(data: dict) -> str:
         pnl = port.get("daily_pnl")
         row1_parts = []
         if nlv is not None:
-            row1_parts.append(f"[dim]NLV[/]       [bold white]${nlv:,.0f}[/]")
+            row1_parts.append(f"[dim]{t('briefing.nlv')}[/]       [bold white]${nlv:,.0f}[/]")
         if pnl is not None:
             pc = "green" if pnl >= 0 else "#ff3232"
             pnl_str = f"[{pc}]{pnl:+,.0f}[/]"
@@ -40,7 +41,7 @@ def format_briefing(data: dict) -> str:
             if nlv and nlv > 0:
                 pnl_pct = (pnl / nlv) * 100
                 pnl_str += f"  [{pc}]({pnl_pct:+.2f}%)[/]"
-            row1_parts.append(f"[dim]Day P&L[/]   {pnl_str}")
+            row1_parts.append(f"[dim]{t('briefing.day_pnl')}[/]   {pnl_str}")
         if row1_parts:
             lines.append("    " + "     ".join(row1_parts))
 
@@ -51,13 +52,13 @@ def format_briefing(data: dict) -> str:
         row2_parts = []
         if cushion is not None:
             cc = "#ff3232" if cushion < 10 else "#ffc800" if cushion < 15 else "green"
-            row2_parts.append(f"[dim]Cushion[/]   [{cc}]{cushion:.1f}%[/]")
+            row2_parts.append(f"[dim]{t('briefing.cushion')}[/]   [{cc}]{cushion:.1f}%[/]")
         if lever is not None:
             lc = "#ff3232" if lever > 3 else "#ffc800" if lever > 2 else "green"
-            row2_parts.append(f"[dim]Leverage[/]  [{lc}]{lever:.1f}x[/]")
+            row2_parts.append(f"[dim]{t('briefing.leverage')}[/]  [{lc}]{lever:.1f}x[/]")
         if dd is not None and dd < 0:
             dc = "#ff3232" if dd < -5 else "#ffc800"
-            row2_parts.append(f"[dim]Drawdown[/]  [{dc}]{dd:.1f}%[/]")
+            row2_parts.append(f"[dim]{t('briefing.drawdown')}[/]  [{dc}]{dd:.1f}%[/]")
         if row2_parts:
             lines.append("    " + "     ".join(row2_parts))
 
@@ -73,16 +74,16 @@ def format_briefing(data: dict) -> str:
         # Build macro items as (label, formatted_value) pairs
         items = []
         for key, label, fmt_type in [
-            ("sp500_pct", "S&P 500", "pct"),
-            ("nasdaq_pct", "Nasdaq", "pct"),
-            ("sox_pct", "SOX", "pct"),
-            ("hsi_pct", "HSI", "pct"),
-            ("vix", "VIX", "vix"),
-            ("dxy", "DXY", "dxy"),
-            ("tnx", "10Y Yield", "yield"),
-            ("oil", "WTI Oil", "commodity"),
-            ("gold", "Gold", "commodity"),
-            ("btc", "Bitcoin", "btc"),
+            ("sp500_pct", t("briefing.macro.sp500"), "pct"),
+            ("nasdaq_pct", t("briefing.macro.nasdaq"), "pct"),
+            ("sox_pct", t("briefing.macro.sox"), "pct"),
+            ("hsi_pct", t("briefing.macro.hsi"), "pct"),
+            ("vix", t("briefing.macro.vix"), "vix"),
+            ("dxy", t("briefing.macro.dxy"), "dxy"),
+            ("tnx", t("briefing.macro.tnx"), "yield"),
+            ("oil", t("briefing.macro.oil"), "commodity"),
+            ("gold", t("briefing.macro.gold"), "commodity"),
+            ("btc", t("briefing.macro.btc"), "btc"),
         ]:
             val = macro.get(key)
             if val is None:
@@ -124,13 +125,13 @@ def format_briefing(data: dict) -> str:
                     pct_str = f" [{bc}]{pct:+.1f}%[/]"
                 items.append((label, f"[white]${val:,.0f}[/]{pct_str}"))
 
-        # Render in two columns
+        # Render in two columns (pad() is CJK-aware — Chinese chars are 2 cells each)
         for i in range(0, len(items), 2):
             left = items[i]
-            left_str = f"[dim]{left[0]:<10}[/] {left[1]}"
+            left_str = f"[dim]{pad(left[0], 10)}[/] {left[1]}"
             if i + 1 < len(items):
                 right = items[i + 1]
-                right_str = f"[dim]{right[0]:<10}[/] {right[1]}"
+                right_str = f"[dim]{pad(right[0], 10)}[/] {right[1]}"
                 lines.append(f"    {left_str}     {right_str}")
             else:
                 lines.append(f"    {left_str}")
@@ -142,9 +143,9 @@ def format_briefing(data: dict) -> str:
     losers = movers.get("losers", [])
     if gainers or losers:
         lines.append(f"  [bold #00c8ff]{t('briefing.movers')}[/]")
-        # Header
+        # Header — pad() for CJK-aware column width
         lines.append(
-            f"    [dim]{'GAINERS':<30}{'LOSERS':<30}[/]"
+            f"    [dim]{pad(t('briefing.gainers'), 30)}{pad(t('briefing.losers'), 30)}[/]"
         )
         max_rows = max(len(gainers[:5]), len(losers[:5]))
         for i in range(max_rows):
@@ -240,7 +241,7 @@ def format_briefing(data: dict) -> str:
             detail_parts = [f"[dim]{e['date']}[/]", f"{urgency}{days}d[/]"]
             eps_est = e.get("eps_est")
             if eps_est is not None:
-                detail_parts.append(f"[dim]Est EPS[/] [white]${eps_est:.2f}[/]")
+                detail_parts.append(f"[dim]{t('briefing.est_eps')}[/] [white]${eps_est:.2f}[/]")
             lines.append(
                 f"    {urgency}{e['symbol']:<6}[/]  "
                 + "  ".join(detail_parts)
