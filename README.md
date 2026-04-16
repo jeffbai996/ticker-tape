@@ -13,7 +13,7 @@ Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat
 Built on Textual (Python TUI framework) with Rich markup rendering. Data layer uses yfinance with a TTL-cached info pipeline and parallel batch fetching via `ThreadPoolExecutor`. IBKR integration through MCP streamable HTTP with multi-account support.
 
 **Refresh**: 30-second quote cycle, parallel sparkline fetches (6 workers), quotes display before charts load
-**Cache**: 30-second TTL on `.info` calls — eliminates redundant yfinance requests across sidebar, thesis, and lookup views
+**Cache**: 10-second TTL on `.info` calls, 120s on technicals, 60s on benchmark history — eliminates redundant yfinance requests across sidebar, thesis, and lookup views
 **Compact mode**: Toggle with `c` — two-line-per-symbol view with sparklines, earnings, technicals, and sidebar watchlist. Auto-enables on narrow terminals
 **Watchlist groups**: Named symbol groups with sidebar headers, synced to thesis buckets at runtime
 **Alerts**: Smart alerts — price levels, RSI thresholds, SMA crossovers, volume spikes, margin cushion. Fire-once trigger with auto-removal. Technical alerts on 60s eval cycle
@@ -42,7 +42,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 | **Timeline** | 90-day NLV ASCII chart with drawdown from peak, leverage trend, cushion |
 | **Surprises** | Watchlist-wide earnings surprise history: EPS beat/miss, price reaction, streaks |
 | **Sizing** | Pre-trade what-if: margin impact, concentration weight, cushion before/after |
-| **Briefing** | Morning briefing: portfolio health, macro (7 indicators), movers, earnings this week |
+| **Briefing** | Morning briefing: portfolio health, macro (10 indicators incl. DXY/10Y/BTC), movers, sector snapshot, news headlines per top mover, earnings with EPS estimates |
 
 ## AI Chat
 
@@ -227,7 +227,7 @@ Real-time watchlist quotes with refresh flash indicator. IBKR P&L section (daily
 
 ## IBKR Integration
 
-Multi-account MCP client over streamable HTTP. Two accounts on the same or separate IB Gateways, configured via environment variables. Per-account labels with gateway-down detection. Compact column formatting with automatic currency filtering (USD/CAD).
+Multi-account MCP client over streamable HTTP. Two accounts on the same or separate IB Gateways, configured via environment variables. Per-account labels with gateway-down detection. Compact column formatting with currency filtering and FX conversion (USD/CAD, USD/JPY, USD/EUR, USD/CNY, USD/TWD, CAD/HKD, CAD/CNY). Consolidated view renders three blocks — per-account summaries plus a "Combined" cross-account roll-up with shared NLV/leverage/margin metrics.
 
 | Command | What it shows |
 |---------|--------------|
@@ -248,16 +248,16 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 ```
 ═══ POSITIONS (U12345678) ═══  14:32:05 ET
 
-         Shares      Cost     Price         Value            P&L    Wt%
-─────────────────────────────────────────────────────────────────────
- AAPL       500 $  185.20 $  198.45   $99,225.00   +$6,625.00   28.3%
- MSFT       300 $  378.50 $  412.30  $123,690.00  +$10,140.00   25.1%
- GOOGL      400 $  155.80 $  168.92   $67,568.00   +$5,248.00   19.4%
- AMZN       250 $  178.40 $  192.15   $48,037.50   +$3,437.50   13.7%
+         Shares      Cost     Price         Value             P&L    Wt%
+──────────────────────────────────────────────────────────────────────
+ AAPL       500 $  185.20 $  198.45    $99,225.00    +   6,625.00  28.3%
+ MSFT       300 $  378.50 $  412.30   $123,690.00    +  10,140.00  25.1%
+ GOOGL      400 $  155.80 $  168.92    $67,568.00    +   5,248.00  19.4%
+ AMZN       250 $  178.40 $  192.15    $48,037.50    +   3,437.50  13.7%
 
- Total Market Value             $350,482.50 USD
- Daily P&L                      +$2,841.20
- Daily P&L %                    +0.82%
+ Total Market Value              $350,482.50 USD
+ Daily P&L                       +$2,841.20
+ Daily P&L %                     +0.82%
 ```
 
 ## Stack
