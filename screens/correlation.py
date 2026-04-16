@@ -38,7 +38,7 @@ def format_correlation(data: dict | None) -> str:
     header = " " * 5 + "".join(f"{s:>6}" for s in symbols)
     lines.append(header)
 
-    # Data rows
+    # Data rows — heatmap coloring: tighter bands so the mid-range stands out
     for i, sym in enumerate(symbols):
         row = f"{sym:<5}"
         for j in range(n):
@@ -46,14 +46,20 @@ def format_correlation(data: dict | None) -> str:
             cell = f"{val:6.2f}"
             if i == j:
                 cell = f"[dim]{cell}[/]"
-            elif val > 0.8:
-                cell = f"[bold green]{cell}[/]"
+            elif val >= 0.9:
+                cell = f"[bold #00ff64]{cell}[/]"    # bright green — near-lockstep
+            elif val >= 0.8:
+                cell = f"[bold green]{cell}[/]"      # green — strongly correlated
+            elif val >= 0.6:
+                cell = f"[#ffc800]{cell}[/]"         # amber — hidden-beta zone
             elif val >= 0.4:
-                cell = f"[white]{cell}[/]"
+                cell = f"[#c89614]{cell}[/]"         # dim amber — moderate
+            elif val >= 0.2:
+                cell = f"[white]{cell}[/]"           # white — weakly correlated
             elif val >= 0.0:
-                cell = f"[dim]{cell}[/]"
+                cell = f"[dim]{cell}[/]"             # dim — near-zero
             else:
-                cell = f"[bold #ff3232]{cell}[/]"
+                cell = f"[bold #ff3232]{cell}[/]"    # red — inverse
             row += cell
         lines.append(row)
 
@@ -69,11 +75,13 @@ def format_correlation(data: dict | None) -> str:
     lines.append("")
     lines.append(f"{t('corr.avg')}: {avg:.2f}")
 
-    # Legend
+    # Legend — matches heatmap bands above
     lines.append(
-        "[dim]Legend: [bold green]>0.8[/] strong  "
-        "[white]0.4-0.8[/] moderate  "
-        "[dim]<0.4[/] weak  "
+        "[dim]Legend: [bold #00ff64]>0.9[/] lockstep  "
+        "[bold green]0.8-0.9[/] strong  "
+        "[#ffc800]0.6-0.8[/] hidden-beta  "
+        "[#c89614]0.4-0.6[/] moderate  "
+        "[white]0.2-0.4[/] weak  "
         "[bold #ff3232]<0[/] inverse[/]"
     )
 
