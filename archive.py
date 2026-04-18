@@ -101,18 +101,33 @@ def load_prior(slug: str) -> list[dict]:
     return memos
 
 
+def _first_body_paragraph(body: str) -> str:
+    """Return the first non-empty, non-H1 paragraph of a memo body.
+
+    Memos start with `# {target} — {date}` which is useless as a summary.
+    Skip it and take the next paragraph.
+    """
+    paragraphs = [p.strip() for p in body.split("\n\n") if p.strip()]
+    for p in paragraphs:
+        if not p.lstrip().startswith("# "):
+            return p
+    return ""
+
+
 def _index_entries_for_slug(slug: str) -> list[dict]:
     """Return lightweight index entries (no full body) for a slug."""
     entries = []
     for memo in load_prior(slug):
         fm = memo["front_matter"]
+        first = _first_body_paragraph(memo["body"])
+        summary = first if len(first) <= 200 else first[:199] + "…"
         entries.append({
             "date": fm["date"],
             "path": os.path.relpath(memo["path"], ARCHIVE_ROOT),
             "target": fm.get("target", ""),
             "kind": fm.get("kind", ""),
             "conviction": fm.get("conviction", {}),
-            "summary": memo["body"].split("\n\n")[0][:200],
+            "summary": summary,
         })
     return entries
 

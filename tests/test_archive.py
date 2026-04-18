@@ -203,3 +203,42 @@ class TestRebuildIndex:
         assert "MU" in index
         assert index["AVGO"][0]["conviction"]["key_claim"] == "claim"
         assert index["AVGO"][0]["path"].endswith(".md")
+
+    def test_rebuild_index_walks_freeform_hashes(self, tmp_path, monkeypatch):
+        """Freeform memos nest under _freeform/<hash>/; index keys must
+        use the full `_freeform/<hash>` form, not just `_freeform`."""
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        base_fm = {
+            "kind": "freeform", "angle": "general", "model": "x",
+            "prior_memos": [], "tools_used": [],
+            "conviction": {"level": "low", "key_claim": "x"},
+            "trigger_type": "manual",
+        }
+        archive_mod.write_memo(
+            "_freeform/abcd1234",
+            dict(base_fm, target="why is XLU up",
+                 date="2026-04-18T14:23:00-04:00"),
+            "body")
+        archive_mod.rebuild_index()
+        index = json.loads((tmp_path / "_index.json").read_text())
+        assert "_freeform/abcd1234" in index
+        assert "_freeform" not in index
+        assert index["_freeform/abcd1234"][0]["target"] == "why is XLU up"
+
+    def test_rebuild_index_summary_skips_h1_title(self, tmp_path, monkeypatch):
+        """The first-paragraph summary must skip the H1 title line."""
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        fm = {
+            "target": "AVGO", "kind": "symbol", "angle": "general",
+            "date": "2026-04-18T14:23:00-04:00", "model": "x",
+            "prior_memos": [], "tools_used": [],
+            "conviction": {"level": "high", "key_claim": "x"},
+            "trigger_type": "manual",
+        }
+        body = "# AVGO — 2026-04-18\n\nCustom silicon moat is widening.\n\nMore later.\n"
+        archive_mod.write_memo("AVGO", fm, body)
+        archive_mod.rebuild_index()
+        index = json.loads((tmp_path / "_index.json").read_text())
+        summary = index["AVGO"][0]["summary"]
+        assert summary == "Custom silicon moat is widening."
+        assert "—" not in summary  # no em-dash from the H1 line
