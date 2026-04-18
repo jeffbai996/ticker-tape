@@ -129,7 +129,7 @@ class TestLoadPrior:
         dates = [p["front_matter"]["date"] for p in priors]
         assert dates == sorted(dates, reverse=True)
 
-    def test_load_prior_skips_malformed(self, tmp_path, monkeypatch, capsys):
+    def test_load_prior_skips_malformed(self, tmp_path, monkeypatch):
         monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
         os.makedirs(str(tmp_path / "AVGO"))
         # Write one valid and one malformed
@@ -142,11 +142,19 @@ class TestLoadPrior:
         }
         archive_mod.write_memo("AVGO", fm, "body")
         # Malformed: no front-matter at all
-        with open(str(tmp_path / "AVGO" / "bad.md"), "w") as f:
+        with open(str(tmp_path / "AVGO" / "bad.md"), "w", encoding="utf-8") as f:
             f.write("no front matter here\n")
         priors = archive_mod.load_prior("AVGO")
         assert len(priors) == 1
         assert priors[0]["front_matter"]["target"] == "AVGO"
+
+    def test_load_prior_skips_front_matter_without_date(self, tmp_path, monkeypatch):
+        """Front-matter block present but missing the required `date` key."""
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        os.makedirs(str(tmp_path / "AVGO"))
+        with open(str(tmp_path / "AVGO" / "nodate.md"), "w", encoding="utf-8") as f:
+            f.write("---\ntarget: AVGO\nkind: symbol\n---\nbody\n")
+        assert archive_mod.load_prior("AVGO") == []
 
     def test_load_prior_returns_body_and_path(self, tmp_path, monkeypatch):
         monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
