@@ -82,15 +82,35 @@ class TestWriteAndReadMemo:
         monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
         fm = {
             "target": "AVGO", "kind": "symbol", "angle": "general",
-            "date": "2026-04-18T14:23:00-04:00", "model": "x",
+            "date": "2026-04-18T14:23:05-04:00", "model": "x",
             "prior_memos": [], "tools_used": [],
             "conviction": {"level": "low", "key_claim": "x"},
             "trigger_type": "manual",
         }
         path = archive_mod.write_memo("AVGO", fm, "body")
         filename = os.path.basename(path)
-        # Expect YYYY-MM-DD-HHMM.md
-        assert filename == "2026-04-18-1423.md"
+        # Expect YYYY-MM-DD-HHMMSS.md (seconds precision)
+        assert filename == "2026-04-18-142305.md"
+
+    def test_write_memo_collision_appends_suffix(self, tmp_path, monkeypatch):
+        """Two memos with the exact same timestamp must both survive —
+        the second gets a `-2` suffix so nothing is silently overwritten."""
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        fm = {
+            "target": "AVGO", "kind": "symbol", "angle": "general",
+            "date": "2026-04-18T14:23:05-04:00", "model": "x",
+            "prior_memos": [], "tools_used": [],
+            "conviction": {"level": "low", "key_claim": "x"},
+            "trigger_type": "manual",
+        }
+        first = archive_mod.write_memo("AVGO", fm, "first body")
+        second = archive_mod.write_memo("AVGO", fm, "second body")
+        assert first != second
+        assert os.path.basename(first) == "2026-04-18-142305.md"
+        assert os.path.basename(second) == "2026-04-18-142305-2.md"
+        # Both files still exist
+        assert os.path.exists(first)
+        assert os.path.exists(second)
 
     def test_write_memo_creates_freeform_nested_dir(self, tmp_path, monkeypatch):
         monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))

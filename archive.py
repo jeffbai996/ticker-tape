@@ -34,24 +34,45 @@ def slug_for_target(target: str, kind: str) -> str:
 
 
 def _timestamp_from_iso(iso: str) -> str:
-    """Convert ISO-8601 date to YYYY-MM-DD-HHMM for filename."""
-    # Parse "2026-04-18T14:23:00-04:00" → "2026-04-18-1423"
+    """Convert ISO-8601 date to YYYY-MM-DD-HHMMSS for filename.
+
+    Seconds precision prevents same-minute collisions when two `analyze`
+    invocations land back-to-back (e.g. manual retry after an error memo).
+    """
+    # "2026-04-18T14:23:05-04:00" → "2026-04-18-142305"
     date_part, time_part = iso.split("T")
-    hhmm = time_part.split(":")[0] + time_part.split(":")[1]
-    return f"{date_part}-{hhmm}"
+    segs = time_part.split(":")
+    hh = segs[0]
+    mm = segs[1] if len(segs) > 1 else "00"
+    # segs[2] includes seconds + optional tz offset; strip non-digits
+    ss_raw = segs[2] if len(segs) > 2 else "00"
+    ss = "".join(c for c in ss_raw if c.isdigit())[:2].zfill(2)
+    return f"{date_part}-{hh}{mm}{ss}"
+
+
+def _unique_memo_path(dir_path: str, base: str) -> str:
+    """Return a non-colliding path: base.md, or base-2.md, -3.md, ..."""
+    path = os.path.join(dir_path, f"{base}.md")
+    if not os.path.exists(path):
+        return path
+    for suffix in range(2, 1000):
+        path = os.path.join(dir_path, f"{base}-{suffix}.md")
+        if not os.path.exists(path):
+            return path
+    raise RuntimeError(f"Too many memos in one second at {dir_path}/{base}")
 
 
 def write_memo(slug: str, front_matter: dict, body: str) -> str:
     """Write a memo to disk under ARCHIVE_ROOT/{slug}/.
 
-    Filename derived from front_matter['date'] as YYYY-MM-DD-HHMM.md.
-    Creates directory if missing.
+    Filename derived from front_matter['date'] as YYYY-MM-DD-HHMMSS.md.
+    On collision, appends `-2`, `-3`, etc. Creates directory if missing.
     Returns the absolute path written.
     """
     dir_path = os.path.join(ARCHIVE_ROOT, slug)
     os.makedirs(dir_path, exist_ok=True)
-    filename = _timestamp_from_iso(front_matter["date"]) + ".md"
-    path = os.path.join(dir_path, filename)
+    base = _timestamp_from_iso(front_matter["date"])
+    path = _unique_memo_path(dir_path, base)
 
     fm_yaml = yaml.safe_dump(front_matter, sort_keys=False,
                              default_flow_style=None, allow_unicode=True)
@@ -150,6 +171,10 @@ def rebuild_index() -> str:
             continue
         index[slug_name] = _index_entries_for_slug(slug_name)
     path = os.path.join(ARCHIVE_ROOT, "_index.json")
-    with open(path, "w", encoding="utf-8") as f:
+    # Atomic replace: write to .tmp, then rename. Prevents a concurrent
+    # reader from seeing a half-written file if two analyze calls overlap.
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(index, f, indent=2)
+    os.replace(tmp_path, path)
     return path
