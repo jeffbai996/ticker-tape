@@ -247,3 +247,29 @@ The company reported earnings yesterday."""
         conv = analyze.extract_conviction(body)
         assert conv["level"] == "unknown"
         # key_claim may be empty string if section missing — that's fine
+
+    def test_conviction_keyword_in_second_sentence(self):
+        """Models sometimes lead with a framing sentence before the keyword.
+        key_claim should be the first NON-keyword sentence."""
+        body = ("## Current Read\n"
+                "Setup continues to look constructive. "
+                "High conviction long — moat is widening.\n")
+        conv = analyze.extract_conviction(body)
+        assert conv["level"] == "high"
+        # The claim is the framing sentence (doesn't contain the keyword)
+        assert "setup continues" in conv["key_claim"].lower()
+
+    def test_key_claim_truncated_with_ellipsis(self):
+        """Long key_claim gets capped at 200 chars with trailing ellipsis."""
+        long_claim = "A" * 250
+        body = f"## Current Read\n{long_claim}.\n"
+        conv = analyze.extract_conviction(body)
+        assert len(conv["key_claim"]) == 200
+        assert conv["key_claim"].endswith("…")
+
+    def test_system_prompt_instructs_conviction_phrasing(self):
+        """build_system_prompt must instruct the model to state conviction
+        explicitly — otherwise extract_conviction resolves to 'unknown'."""
+        prompt = analyze.build_system_prompt("symbol", "AVGO", "general", [])
+        assert "High conviction" in prompt
+        assert "Low conviction" in prompt

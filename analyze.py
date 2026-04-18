@@ -114,6 +114,7 @@ If no prior memo: state "First memo for this target."
 
 ## Current Read
 Argue the current thesis status. Be direct and specific. No hedging.
+Start this section by stating conviction explicitly as one of: "High conviction", "Medium conviction", or "Low conviction".
 
 ## Risks / Disconfirming Evidence
 Steelman the bear case. List concrete disconfirming evidence.
@@ -148,12 +149,17 @@ def build_front_matter(kind: str, target: str, angle: str,
 
 
 def extract_conviction(body: str) -> dict:
-    """Parse the Current Read section to extract conviction level + key_claim.
+    """Heuristic parse of the `## Current Read` section into {level, key_claim}.
 
-    Heuristic: find the Current Read section text, scan first 200 chars for
-    "high/medium/low conviction" keyword, return content after conviction
-    keyword as key_claim (usually the substantive claim, not the keyword itself).
-    If section missing or no keyword: level="unknown".
+    Scans the first 300 chars of the section (case-insensitive) for one of
+    `high/medium/moderate/low conviction`. When a keyword is found, `key_claim`
+    is the first sentence that does NOT contain the keyword (the substantive
+    claim). Otherwise `key_claim` is the first sentence and level="unknown".
+    `key_claim` is capped at 200 chars with a trailing ellipsis when truncated.
+
+    The Gemini system prompt is expected to instruct the model to state
+    conviction explicitly — without that, most memos will resolve to
+    level="unknown".
     """
     m = re.search(r"##\s+Current Read\s*\n(.*?)(?=\n##\s|\Z)", body,
                   re.DOTALL | re.IGNORECASE)
@@ -168,15 +174,18 @@ def extract_conviction(body: str) -> dict:
     else:
         level = "unknown"
 
-    # Extract key_claim: skip the conviction keyword line, take the substantive claim.
-    # If conviction keyword is found, try to extract what comes after it.
-    # Otherwise fall back to the first sentence of the section.
-    sentences = re.split(r"[.!?]\s+", section)
+    sentences = [s.strip() for s in re.split(r"[.!?]\s+", section) if s.strip()]
     if level != "unknown":
-        # Skip first sentence (likely contains the conviction keyword), take next
-        key_claim = sentences[1] if len(sentences) > 1 else sentences[0]
+        # First sentence that is NOT the conviction keyword declaration.
+        kw = f"{level} conviction"
+        key_claim = next(
+            (s for s in sentences if kw not in s.lower()),
+            sentences[0] if sentences else "",
+        )
     else:
-        # No conviction keyword found, use first sentence
         key_claim = sentences[0] if sentences else ""
 
-    return {"level": level, "key_claim": key_claim[:200].strip()}
+    key_claim = key_claim.strip()
+    if len(key_claim) > 200:
+        key_claim = key_claim[:199] + "…"
+    return {"level": level, "key_claim": key_claim}
