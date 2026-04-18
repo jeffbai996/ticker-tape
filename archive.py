@@ -5,6 +5,7 @@ no AI. All functions are pure given the filesystem state.
 """
 
 import hashlib
+import json
 import os
 import sys
 
@@ -98,3 +99,42 @@ def load_prior(slug: str) -> list[dict]:
     # Sort newest-first by front_matter.date
     memos.sort(key=lambda m: m["front_matter"]["date"], reverse=True)
     return memos
+
+
+def _index_entries_for_slug(slug: str) -> list[dict]:
+    """Return lightweight index entries (no full body) for a slug."""
+    entries = []
+    for memo in load_prior(slug):
+        fm = memo["front_matter"]
+        entries.append({
+            "date": fm["date"],
+            "path": os.path.relpath(memo["path"], ARCHIVE_ROOT),
+            "target": fm.get("target", ""),
+            "kind": fm.get("kind", ""),
+            "conviction": fm.get("conviction", {}),
+            "summary": memo["body"].split("\n\n")[0][:200],
+        })
+    return entries
+
+
+def rebuild_index() -> str:
+    """Walk ARCHIVE_ROOT, produce _index.json. Returns path to index file."""
+    os.makedirs(ARCHIVE_ROOT, exist_ok=True)
+    index: dict[str, list[dict]] = {}
+    for slug_name in sorted(os.listdir(ARCHIVE_ROOT)):
+        slug_dir = os.path.join(ARCHIVE_ROOT, slug_name)
+        if not os.path.isdir(slug_dir) or slug_name.startswith("."):
+            continue
+        # Handle nested _freeform/<hash>/ layout
+        if slug_name == "_freeform":
+            for sub in sorted(os.listdir(slug_dir)):
+                sub_path = os.path.join(slug_dir, sub)
+                if os.path.isdir(sub_path):
+                    key = f"_freeform/{sub}"
+                    index[key] = _index_entries_for_slug(key)
+            continue
+        index[slug_name] = _index_entries_for_slug(slug_name)
+    path = os.path.join(ARCHIVE_ROOT, "_index.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(index, f, indent=2)
+    return path

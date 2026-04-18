@@ -1,5 +1,6 @@
 """Tests for archive.py — pure disk I/O over data/analyses/."""
 
+import json
 import os
 
 import archive
@@ -170,3 +171,35 @@ class TestLoadPrior:
         assert len(priors) == 1
         assert "unique body content" in priors[0]["body"]
         assert priors[0]["path"].endswith(".md")
+
+
+class TestRebuildIndex:
+    def test_rebuild_index_empty_archive(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        archive_mod.rebuild_index()
+        index_path = tmp_path / "_index.json"
+        assert index_path.exists()
+        assert json.loads(index_path.read_text()) == {}
+
+    def test_rebuild_index_includes_all_slugs(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        base_fm = {
+            "kind": "symbol", "angle": "general", "model": "x",
+            "prior_memos": [], "tools_used": [],
+            "conviction": {"level": "high", "key_claim": "claim"},
+            "trigger_type": "manual",
+        }
+        archive_mod.write_memo(
+            "AVGO",
+            dict(base_fm, target="AVGO", date="2026-04-18T14:23:00-04:00"),
+            "body")
+        archive_mod.write_memo(
+            "MU",
+            dict(base_fm, target="MU", date="2026-04-18T15:00:00-04:00"),
+            "body")
+        archive_mod.rebuild_index()
+        index = json.loads((tmp_path / "_index.json").read_text())
+        assert "AVGO" in index
+        assert "MU" in index
+        assert index["AVGO"][0]["conviction"]["key_claim"] == "claim"
+        assert index["AVGO"][0]["path"].endswith(".md")
