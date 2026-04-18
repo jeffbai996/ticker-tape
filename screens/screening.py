@@ -1,6 +1,6 @@
 """Screening table — fundamental + technical metrics for quick comparison."""
 
-from formatters import color_pct, rsi_color, off_high, fmt_num
+from formatters import rsi_color, off_high
 from i18n import t
 
 

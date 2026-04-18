@@ -158,7 +158,7 @@ def format_briefing(data: dict) -> str:
                     f"[green]▲ {g['symbol']:<6}[/]"
                     f"[green]{g['pct']:+5.1f}%[/]  "
                     f"[dim]${g['price']:>8,.2f}[/] "
-                    f"[green]{chg:+.2f}[/]"
+                    f"[green]{chg:>+7.2f}[/]"
                 )
             if i < len(losers):
                 lo = losers[i]
@@ -167,7 +167,7 @@ def format_briefing(data: dict) -> str:
                     f"[#ff3232]▼ {lo['symbol']:<6}[/]"
                     f"[#ff3232]{lo['pct']:+5.1f}%[/]  "
                     f"[dim]${lo['price']:>8,.2f}[/] "
-                    f"[#ff3232]{chg:+.2f}[/]"
+                    f"[#ff3232]{chg:>+7.2f}[/]"
                 )
             if left and right:
                 lines.append(f"    {left}     {right}")
