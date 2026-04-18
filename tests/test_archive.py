@@ -1,6 +1,5 @@
 """Tests for archive.py — pure disk I/O over data/analyses/."""
 
-import datetime
 import os
 
 import archive
@@ -72,7 +71,7 @@ class TestWriteAndReadMemo:
         }
         body = "# MU — 2026-04-18\n\n## Context\nBody content here.\n"
         path = archive_mod.write_memo("MU", fm, body)
-        text = open(path).read()
+        text = open(path, encoding="utf-8").read()
         assert "target: MU" in text
         assert "angle: earnings" in text
         assert "HBM ramp continues" in text
