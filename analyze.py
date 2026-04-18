@@ -5,6 +5,7 @@ from archive, builds context, calls Gemini Pro, streams memo to terminal,
 writes result back to archive.
 """
 
+import datetime
 import re
 
 
@@ -25,6 +26,8 @@ _TICKER_RE = re.compile(r"^[A-Za-z]{1,5}$")
 # Prior memos fed into the system prompt are capped — token budget + older
 # memos lose relevance. 5 covers "recent conviction evolution" without bloat.
 MAX_PRIOR_MEMOS_IN_PROMPT = 5
+
+GEMINI_PRO_MODEL_ID = "gemini-3.1-pro-preview"
 
 
 def classify_target(target: str) -> tuple[str, str]:
@@ -118,3 +121,22 @@ Citations from grounding and tool calls.
 
 Output ONLY the memo markdown starting with `# {target} — YYYY-MM-DD`. No preamble, no meta-commentary.
 """
+
+
+def build_front_matter(kind: str, target: str, angle: str,
+                       prior_memos: list[dict], tools_used: list[str],
+                       conviction: dict, trigger_type: str = "manual") -> dict:
+    """Build the YAML front-matter dict for a new memo."""
+    now = datetime.datetime.now().astimezone()
+    iso = now.isoformat(timespec="seconds")
+    return {
+        "target": target,
+        "kind": kind,
+        "angle": angle,
+        "date": iso,
+        "model": GEMINI_PRO_MODEL_ID,
+        "prior_memos": [m["path"] for m in prior_memos],
+        "tools_used": tools_used,
+        "conviction": conviction,
+        "trigger_type": trigger_type,
+    }

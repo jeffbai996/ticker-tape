@@ -162,3 +162,41 @@ class TestBuildSystemPrompt:
         }]
         prompt = analyze.build_system_prompt("symbol", "AVGO", "general", priors)
         assert '\\"the more you buy\\"' in prompt
+
+
+class TestBuildFrontMatter:
+    def test_basic_fields_populated(self):
+        fm = analyze.build_front_matter(
+            kind="symbol", target="AVGO", angle="general",
+            prior_memos=[], tools_used=["get_quote"],
+            conviction={"level": "high", "key_claim": "moat widening"},
+            trigger_type="manual",
+        )
+        assert fm["target"] == "AVGO"
+        assert fm["kind"] == "symbol"
+        assert fm["angle"] == "general"
+        assert fm["model"] == "gemini-3.1-pro-preview"
+        assert fm["tools_used"] == ["get_quote"]
+        assert fm["conviction"]["level"] == "high"
+        assert fm["trigger_type"] == "manual"
+        assert "date" in fm
+        assert "T" in fm["date"]  # ISO-8601 format
+
+    def test_prior_memos_as_relative_paths(self):
+        priors = [{"path": "/abs/path/AVGO/2026-03-12-0915.md",
+                   "front_matter": {}, "body": ""}]
+        fm = analyze.build_front_matter(
+            kind="symbol", target="AVGO", angle="general",
+            prior_memos=priors, tools_used=[],
+            conviction={"level": "low", "key_claim": "x"},
+            trigger_type="manual",
+        )
+        assert fm["prior_memos"] == ["/abs/path/AVGO/2026-03-12-0915.md"]
+
+    def test_default_trigger_type_is_manual(self):
+        fm = analyze.build_front_matter(
+            kind="symbol", target="AVGO", angle="general",
+            prior_memos=[], tools_used=[],
+            conviction={"level": "low", "key_claim": "x"},
+        )
+        assert fm["trigger_type"] == "manual"
