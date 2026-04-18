@@ -22,6 +22,10 @@ def _thesis_keys() -> list[str]:
 
 _TICKER_RE = re.compile(r"^[A-Za-z]{1,5}$")
 
+# Prior memos fed into the system prompt are capped — token budget + older
+# memos lose relevance. 5 covers "recent conviction evolution" without bloat.
+MAX_PRIOR_MEMOS_IN_PROMPT = 5
+
 
 def classify_target(target: str) -> tuple[str, str]:
     """Classify a raw target string.
@@ -54,13 +58,16 @@ def build_system_prompt(kind: str, target: str, angle_hint: str,
     # Prior memos summary
     if prior_memos:
         prior_block = "Prior memos for this target (newest first):\n"
-        for m in prior_memos[:5]:  # cap at 5 most recent
-            fm = m["front_matter"]
+        for m in prior_memos[:MAX_PRIOR_MEMOS_IN_PROMPT]:
+            fm = m.get("front_matter", {})
             conv = fm.get("conviction", {})
+            # Escape quotes and flatten newlines so one claim can't
+            # break the list structure.
+            claim = str(conv.get("key_claim", "")).replace('"', '\\"').replace("\n", " ")
             prior_block += (
                 f"- {fm.get('date', '?')}: "
                 f"conviction={conv.get('level', '?')} "
-                f"claim=\"{conv.get('key_claim', '')}\"\n"
+                f"claim=\"{claim}\"\n"
             )
     else:
         prior_block = "No prior memos for this target — this is the first memo."

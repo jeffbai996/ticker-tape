@@ -108,3 +108,57 @@ class TestBuildSystemPrompt:
             "thesis", "rotation", "general", [])
         assert sym_prompt != thesis_prompt
         assert "rotation" in thesis_prompt.lower()
+
+    def test_freeform_kind_renders_question(self):
+        """Freeform branch must surface the raw question in kind_guidance."""
+        prompt = analyze.build_system_prompt(
+            "freeform", "why is XLU up", "general", [])
+        assert "why is XLU up" in prompt
+        assert "freeform" in prompt.lower()
+
+    def test_prior_memos_capped_at_limit(self):
+        """Only the first MAX_PRIOR_MEMOS_IN_PROMPT priors appear in prompt."""
+        cap = analyze.MAX_PRIOR_MEMOS_IN_PROMPT
+        priors = [
+            {"path": f"/x/AVGO/{i}.md",
+             "front_matter": {
+                 "date": f"2026-04-{(cap + 5) - i:02d}T10:00:00-04:00",
+                 "conviction": {"level": "high", "key_claim": f"claim-{i}"},
+             },
+             "body": ""}
+            for i in range(cap + 3)
+        ]
+        prompt = analyze.build_system_prompt("symbol", "AVGO", "general", priors)
+        for i in range(cap):
+            assert f"claim-{i}" in prompt
+        # Entries beyond the cap must not appear
+        for i in range(cap, cap + 3):
+            assert f"claim-{i}" not in prompt
+
+    def test_prior_memo_missing_conviction_uses_defaults(self):
+        """Prior memo whose front-matter lacks conviction renders `?` defaults
+        rather than crashing."""
+        priors = [{
+            "path": "/x/AVGO/2026-03-12-0915.md",
+            "front_matter": {"date": "2026-03-12T09:15:00-04:00"},
+            "body": "",
+        }]
+        prompt = analyze.build_system_prompt("symbol", "AVGO", "general", priors)
+        assert "conviction=?" in prompt
+
+    def test_prior_memo_key_claim_with_embedded_quotes(self):
+        """Embedded double quotes in key_claim must be escaped so the list
+        item stays well-formed."""
+        priors = [{
+            "path": "/x/AVGO/2026-03-12-0915.md",
+            "front_matter": {
+                "date": "2026-03-12T09:15:00-04:00",
+                "conviction": {
+                    "level": "high",
+                    "key_claim": 'Jensen said "the more you buy" again',
+                },
+            },
+            "body": "",
+        }]
+        prompt = analyze.build_system_prompt("symbol", "AVGO", "general", priors)
+        assert '\\"the more you buy\\"' in prompt
