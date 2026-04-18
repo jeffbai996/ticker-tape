@@ -145,3 +145,38 @@ def build_front_matter(kind: str, target: str, angle: str,
         "conviction": conviction,
         "trigger_type": trigger_type,
     }
+
+
+def extract_conviction(body: str) -> dict:
+    """Parse the Current Read section to extract conviction level + key_claim.
+
+    Heuristic: find the Current Read section text, scan first 200 chars for
+    "high/medium/low conviction" keyword, return content after conviction
+    keyword as key_claim (usually the substantive claim, not the keyword itself).
+    If section missing or no keyword: level="unknown".
+    """
+    m = re.search(r"##\s+Current Read\s*\n(.*?)(?=\n##\s|\Z)", body,
+                  re.DOTALL | re.IGNORECASE)
+    section = m.group(1).strip() if m else ""
+    lower = section.lower()[:300]
+    if "high conviction" in lower:
+        level = "high"
+    elif "medium conviction" in lower or "moderate conviction" in lower:
+        level = "medium"
+    elif "low conviction" in lower:
+        level = "low"
+    else:
+        level = "unknown"
+
+    # Extract key_claim: skip the conviction keyword line, take the substantive claim.
+    # If conviction keyword is found, try to extract what comes after it.
+    # Otherwise fall back to the first sentence of the section.
+    sentences = re.split(r"[.!?]\s+", section)
+    if level != "unknown":
+        # Skip first sentence (likely contains the conviction keyword), take next
+        key_claim = sentences[1] if len(sentences) > 1 else sentences[0]
+    else:
+        # No conviction keyword found, use first sentence
+        key_claim = sentences[0] if sentences else ""
+
+    return {"level": level, "key_claim": key_claim[:200].strip()}

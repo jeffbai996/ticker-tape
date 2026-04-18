@@ -205,3 +205,45 @@ class TestBuildFrontMatter:
             conviction={"level": "low", "key_claim": "x"},
         )
         assert fm["trigger_type"] == "manual"
+
+
+class TestExtractConviction:
+    def test_explicit_high_conviction(self):
+        body = """# AVGO — 2026-04-18
+
+## Context
+x
+
+## Current Read
+High conviction long. Custom silicon moat is widening materially.
+
+## Risks
+x"""
+        conv = analyze.extract_conviction(body)
+        assert conv["level"] == "high"
+        assert "custom silicon moat" in conv["key_claim"].lower()
+
+    def test_explicit_medium_conviction(self):
+        body = """## Current Read
+Medium conviction — setup is constructive but macro is mixed."""
+        conv = analyze.extract_conviction(body)
+        assert conv["level"] == "medium"
+
+    def test_explicit_low_conviction(self):
+        body = """## Current Read
+Low conviction. Trimming into strength."""
+        conv = analyze.extract_conviction(body)
+        assert conv["level"] == "low"
+
+    def test_unknown_when_no_keyword(self):
+        body = """## Current Read
+The company reported earnings yesterday."""
+        conv = analyze.extract_conviction(body)
+        assert conv["level"] == "unknown"
+        assert "company reported earnings" in conv["key_claim"].lower()
+
+    def test_missing_current_read_section(self):
+        body = "# Something else entirely\n\n## Context\nNo current read here.\n"
+        conv = analyze.extract_conviction(body)
+        assert conv["level"] == "unknown"
+        # key_claim may be empty string if section missing — that's fine
