@@ -6,6 +6,7 @@ no AI. All functions are pure given the filesystem state.
 
 import hashlib
 import os
+import sys
 
 import yaml
 
@@ -59,3 +60,41 @@ def write_memo(slug: str, front_matter: dict, body: str) -> str:
         f.write(content)
 
     return path
+
+
+def _parse_memo_file(path: str) -> dict | None:
+    """Read a memo, split front-matter from body. Return None if malformed."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        if not text.startswith("---\n"):
+            return None
+        _, fm_text, body = text.split("---\n", 2)
+        fm = yaml.safe_load(fm_text)
+        if not isinstance(fm, dict) or "date" not in fm:
+            return None
+        return {"path": path, "front_matter": fm, "body": body.lstrip("\n")}
+    except Exception as e:
+        print(f"[archive] skipping malformed memo {path}: {e}", file=sys.stderr)
+        return None
+
+
+def load_prior(slug: str) -> list[dict]:
+    """Load all prior memos for a slug, newest-first.
+
+    Returns list of {"path": str, "front_matter": dict, "body": str}.
+    Malformed memos are skipped with a stderr warning.
+    """
+    dir_path = os.path.join(ARCHIVE_ROOT, slug)
+    if not os.path.isdir(dir_path):
+        return []
+    memos = []
+    for name in os.listdir(dir_path):
+        if not name.endswith(".md"):
+            continue
+        parsed = _parse_memo_file(os.path.join(dir_path, name))
+        if parsed is not None:
+            memos.append(parsed)
+    # Sort newest-first by front_matter.date
+    memos.sort(key=lambda m: m["front_matter"]["date"], reverse=True)
+    return memos

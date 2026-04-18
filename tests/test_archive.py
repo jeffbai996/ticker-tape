@@ -103,3 +103,62 @@ class TestWriteAndReadMemo:
         path = archive_mod.write_memo("_freeform/abcd1234", fm, "body")
         assert "_freeform" in path
         assert os.path.exists(path)
+
+
+class TestLoadPrior:
+    def test_load_prior_empty_returns_empty_list(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        assert archive_mod.load_prior("AVGO") == []
+
+    def test_load_prior_ordered_newest_first(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        # Write 3 memos with different dates
+        base_fm = {
+            "target": "AVGO", "kind": "symbol", "angle": "general",
+            "model": "x", "prior_memos": [], "tools_used": [],
+            "conviction": {"level": "low", "key_claim": "x"},
+            "trigger_type": "manual",
+        }
+        for d in ["2026-03-12T09:15:00-04:00",
+                  "2026-04-18T14:23:00-04:00",
+                  "2026-04-01T10:00:00-04:00"]:
+            fm = dict(base_fm, date=d)
+            archive_mod.write_memo("AVGO", fm, f"body for {d}")
+        priors = archive_mod.load_prior("AVGO")
+        assert len(priors) == 3
+        dates = [p["front_matter"]["date"] for p in priors]
+        assert dates == sorted(dates, reverse=True)
+
+    def test_load_prior_skips_malformed(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        os.makedirs(str(tmp_path / "AVGO"))
+        # Write one valid and one malformed
+        fm = {
+            "target": "AVGO", "kind": "symbol", "angle": "general",
+            "date": "2026-04-18T14:23:00-04:00", "model": "x",
+            "prior_memos": [], "tools_used": [],
+            "conviction": {"level": "low", "key_claim": "x"},
+            "trigger_type": "manual",
+        }
+        archive_mod.write_memo("AVGO", fm, "body")
+        # Malformed: no front-matter at all
+        with open(str(tmp_path / "AVGO" / "bad.md"), "w") as f:
+            f.write("no front matter here\n")
+        priors = archive_mod.load_prior("AVGO")
+        assert len(priors) == 1
+        assert priors[0]["front_matter"]["target"] == "AVGO"
+
+    def test_load_prior_returns_body_and_path(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        fm = {
+            "target": "MU", "kind": "symbol", "angle": "general",
+            "date": "2026-04-18T14:23:00-04:00", "model": "x",
+            "prior_memos": [], "tools_used": [],
+            "conviction": {"level": "low", "key_claim": "x"},
+            "trigger_type": "manual",
+        }
+        archive_mod.write_memo("MU", fm, "unique body content")
+        priors = archive_mod.load_prior("MU")
+        assert len(priors) == 1
+        assert "unique body content" in priors[0]["body"]
+        assert priors[0]["path"].endswith(".md")
