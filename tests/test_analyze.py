@@ -273,3 +273,123 @@ The company reported earnings yesterday."""
         prompt = analyze.build_system_prompt("symbol", "AVGO", "general", [])
         assert "High conviction" in prompt
         assert "Low conviction" in prompt
+
+
+class TestRunAnalysis:
+    def test_happy_path_writes_memo(self, tmp_path, monkeypatch):
+        import archive as archive_mod
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        monkeypatch.setattr(analyze, "_watchlist_symbols", lambda: ["AVGO"])
+        monkeypatch.setattr(analyze, "_thesis_keys", lambda: [])
+
+        fake_body = (
+            "# AVGO — 2026-04-18\n\n"
+            "## Context\nPrice 1720.\n\n"
+            "## What Changed Since Last Memo\nFirst memo for this target.\n\n"
+            "## Current Read\nHigh conviction. Moat widening.\n\n"
+            "## Risks / Disconfirming Evidence\nCapex decel.\n\n"
+            "## Suggested Actions\nNo action — hold.\n\n"
+            "## Sources\nTool: get_quote.\n"
+        )
+
+        def fake_backend(model_cfg, history, system_prompt, images=None):
+            # Yield the body in two chunks to exercise streaming
+            yield (False, fake_body[:100])
+            yield (False, fake_body[100:])
+
+        writes: list[str] = []
+        path = analyze.run_analysis(
+            target="AVGO",
+            angle_hint="",
+            writer_callback=writes.append,
+            backend=fake_backend,
+        )
+        assert path.endswith(".md")
+        import os
+        assert os.path.exists(path)
+        # Writer got the streamed content
+        assert "Moat widening" in "".join(writes)
+        # File has front-matter + body
+        text = open(path, encoding="utf-8").read()
+        assert "target: AVGO" in text
+        assert "conviction:" in text
+        assert "level: high" in text
+        assert "Moat widening" in text
+
+    def test_empty_response_writes_error_memo(self, tmp_path, monkeypatch):
+        import archive as archive_mod
+        import os
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        monkeypatch.setattr(analyze, "_watchlist_symbols", lambda: ["AVGO"])
+        monkeypatch.setattr(analyze, "_thesis_keys", lambda: [])
+
+        def empty_backend(model_cfg, history, system_prompt, images=None):
+            yield (False, "")
+
+        writes: list[str] = []
+        path = analyze.run_analysis(
+            target="AVGO", angle_hint="",
+            writer_callback=writes.append, backend=empty_backend,
+        )
+        assert os.path.exists(path)
+        text = open(path, encoding="utf-8").read()
+        assert "ERROR" in text or "empty" in text.lower()
+
+    def test_backend_exception_writes_error_memo(self, tmp_path, monkeypatch):
+        import archive as archive_mod
+        import os
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        monkeypatch.setattr(analyze, "_watchlist_symbols", lambda: ["AVGO"])
+        monkeypatch.setattr(analyze, "_thesis_keys", lambda: [])
+
+        def boom_backend(model_cfg, history, system_prompt, images=None):
+            raise RuntimeError("gemini down")
+            yield  # make this a generator
+
+        writes: list[str] = []
+        path = analyze.run_analysis(
+            target="AVGO", angle_hint="",
+            writer_callback=writes.append, backend=boom_backend,
+        )
+        assert os.path.exists(path)
+        text = open(path, encoding="utf-8").read()
+        assert "gemini down" in text
+        assert "ERROR" in text
+
+    def test_freeform_target_lands_under_freeform(self, tmp_path, monkeypatch):
+        import archive as archive_mod
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        monkeypatch.setattr(analyze, "_watchlist_symbols", lambda: [])
+        monkeypatch.setattr(analyze, "_thesis_keys", lambda: [])
+
+        def fake_backend(model_cfg, history, system_prompt, images=None):
+            yield (False,
+                   "# Q — 2026-04-18\n## Current Read\nSome answer.\n")
+
+        path = analyze.run_analysis(
+            target="why is the market up",
+            angle_hint="",
+            writer_callback=lambda s: None,
+            backend=fake_backend,
+        )
+        assert "_freeform" in path
+
+    def test_thought_chunks_not_written_as_memo(self, tmp_path, monkeypatch):
+        """Gemini emits (is_thought=True, "...") for chain-of-thought parts —
+        those must NOT be concatenated into the memo body."""
+        import archive as archive_mod
+        monkeypatch.setattr(archive_mod, "ARCHIVE_ROOT", str(tmp_path))
+        monkeypatch.setattr(analyze, "_watchlist_symbols", lambda: ["AVGO"])
+        monkeypatch.setattr(analyze, "_thesis_keys", lambda: [])
+
+        def fake_backend(model_cfg, history, system_prompt, images=None):
+            yield (True, "INTERNAL THINKING — should not appear in memo")
+            yield (False, "# AVGO — 2026-04-18\n## Current Read\nHigh conviction. Good.\n")
+
+        path = analyze.run_analysis(
+            target="AVGO", angle_hint="",
+            writer_callback=lambda s: None, backend=fake_backend,
+        )
+        text = open(path, encoding="utf-8").read()
+        assert "INTERNAL THINKING" not in text
+        assert "High conviction" in text

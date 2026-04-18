@@ -8,6 +8,8 @@ writes result back to archive.
 import datetime
 import re
 
+import archive
+
 
 def _watchlist_symbols() -> list[str]:
     """Return current watchlist symbols. Isolated for easy monkeypatching."""
@@ -189,3 +191,86 @@ def extract_conviction(body: str) -> dict:
     if len(key_claim) > 200:
         key_claim = key_claim[:199] + "…"
     return {"level": level, "key_claim": key_claim}
+
+
+def _default_backend():
+    """Lazy import of real Gemini Pro backend."""
+    import chat as chat_module
+    return chat_module._BACKENDS["gemini"], chat_module.MODELS["pro"]
+
+
+def run_analysis(target: str, angle_hint: str = "",
+                 writer_callback=None, backend=None) -> str:
+    """Execute a deep-dive and return path to the written memo.
+
+    Args:
+        target: raw user target (ticker, thesis name, or freeform text)
+        angle_hint: optional focus hint; stored in front-matter's `angle`
+        writer_callback: optional callable(str) called with each streamed
+                         chunk as it arrives. Used by UI to show progress.
+        backend: optional backend callable (for testing). When None, uses
+                 chat_module._BACKENDS["gemini"] with MODELS["pro"].
+
+    Returns:
+        Absolute path to the written memo file.
+
+    Never raises for backend failures — those are written as error memos
+    instead, so failures remain auditable in the archive.
+    """
+    if writer_callback is None:
+        writer_callback = lambda s: None  # noqa: E731
+
+    kind, normalized = classify_target(target)
+    angle = angle_hint.strip() or "general"
+    slug = archive.slug_for_target(normalized, kind)
+    prior_memos = archive.load_prior(slug)
+    system_prompt = build_system_prompt(kind, normalized, angle, prior_memos)
+
+    # Determine backend + model config
+    if backend is None:
+        backend_fn, model_cfg = _default_backend()
+    else:
+        backend_fn = backend
+        model_cfg = {"id": _gemini_pro_model_id(), "label": "Gemini Pro (test)",
+                     "provider": "gemini", "thinking_budget": 2048}
+
+    # Stream the response, skipping chain-of-thought chunks (is_thought=True)
+    body_chunks: list[str] = []
+    error_msg = None
+    try:
+        for is_thought, chunk in backend_fn(
+            model_cfg,
+            [{"role": "user", "text": f"Produce the memo for {normalized}."}],
+            system_prompt,
+        ):
+            if is_thought is None or is_thought:
+                continue
+            body_chunks.append(chunk)
+            writer_callback(chunk)
+    except Exception as e:
+        error_msg = f"{type(e).__name__}: {e}"
+
+    body = "".join(body_chunks).strip()
+
+    if error_msg or not body:
+        # Build an error memo so failure is auditable
+        reason = error_msg or "empty response from backend"
+        body = (f"# {normalized} — ERROR\n\n"
+                f"## Context\nAnalysis failed.\n\n"
+                f"## What Changed Since Last Memo\nN/A.\n\n"
+                f"## Current Read\nERROR: {reason}\n\n"
+                f"## Risks / Disconfirming Evidence\nN/A.\n\n"
+                f"## Suggested Actions\nRetry or check API keys.\n\n"
+                f"## Sources\nN/A.\n")
+        conviction = {"level": "unknown", "key_claim": f"ERROR: {reason}"}
+    else:
+        conviction = extract_conviction(body)
+
+    fm = build_front_matter(
+        kind=kind, target=normalized, angle=angle,
+        prior_memos=prior_memos, tools_used=["grounding"],
+        conviction=conviction,
+    )
+    path = archive.write_memo(slug, fm, body)
+    archive.rebuild_index()
+    return path
