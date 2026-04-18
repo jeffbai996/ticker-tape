@@ -1,7 +1,5 @@
 """Tests for analyze.py — target classification and AI orchestration."""
 
-import pytest
-
 import analyze
 
 
@@ -52,3 +50,12 @@ class TestClassifyTarget:
         kind, normalized = analyze.classify_target("TSLA")
         assert kind == "symbol"
         assert normalized == "TSLA"
+
+    def test_watchlist_wins_over_thesis_collision(self, monkeypatch):
+        """If the same name exists as both a ticker and a thesis key,
+        symbol wins (checked first). Pins rule precedence."""
+        monkeypatch.setattr(analyze, "_watchlist_symbols", lambda: ["NVDA"])
+        monkeypatch.setattr(analyze, "_thesis_keys", lambda: ["nvda"])
+        kind, normalized = analyze.classify_target("NVDA")
+        assert kind == "symbol"
+        assert normalized == "NVDA"
