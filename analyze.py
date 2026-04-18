@@ -27,7 +27,12 @@ _TICKER_RE = re.compile(r"^[A-Za-z]{1,5}$")
 # memos lose relevance. 5 covers "recent conviction evolution" without bloat.
 MAX_PRIOR_MEMOS_IN_PROMPT = 5
 
-GEMINI_PRO_MODEL_ID = "gemini-3.1-pro-preview"
+def _gemini_pro_model_id() -> str:
+    """Fetch Gemini Pro's model id from chat.py's registry so memo stamps
+    stay truthful when the model version bumps. Lazy import avoids a hard
+    coupling at module load."""
+    import chat
+    return chat.MODELS["pro"]["id"]
 
 
 def classify_target(target: str) -> tuple[str, str]:
@@ -134,7 +139,7 @@ def build_front_matter(kind: str, target: str, angle: str,
         "kind": kind,
         "angle": angle,
         "date": iso,
-        "model": GEMINI_PRO_MODEL_ID,
+        "model": _gemini_pro_model_id(),
         "prior_memos": [m["path"] for m in prior_memos],
         "tools_used": tools_used,
         "conviction": conviction,

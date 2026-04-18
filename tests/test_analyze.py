@@ -172,15 +172,20 @@ class TestBuildFrontMatter:
             conviction={"level": "high", "key_claim": "moat widening"},
             trigger_type="manual",
         )
+        import chat
+        import datetime as _dt
         assert fm["target"] == "AVGO"
         assert fm["kind"] == "symbol"
         assert fm["angle"] == "general"
-        assert fm["model"] == "gemini-3.1-pro-preview"
+        # Model id sourced from chat.MODELS so it never drifts from the
+        # version actually running the analysis
+        assert fm["model"] == chat.MODELS["pro"]["id"]
         assert fm["tools_used"] == ["get_quote"]
         assert fm["conviction"]["level"] == "high"
         assert fm["trigger_type"] == "manual"
-        assert "date" in fm
-        assert "T" in fm["date"]  # ISO-8601 format
+        # ISO-8601 date must actually parse and carry a timezone
+        parsed = _dt.datetime.fromisoformat(fm["date"])
+        assert parsed.tzinfo is not None
 
     def test_prior_memos_as_relative_paths(self):
         priors = [{"path": "/abs/path/AVGO/2026-03-12-0915.md",
