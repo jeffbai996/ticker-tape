@@ -1,6 +1,5 @@
 """Timeline screen — NLV history chart with drawdown and leverage trend."""
 
-from collections import defaultdict
 from datetime import datetime
 
 from i18n import t
@@ -37,8 +36,6 @@ def format_timeline(snapshots: list[dict], peak: float | None) -> str:
         )
 
     daily_nlv = [by_day[d]["nlv"] for d in days]
-    daily_leverage = [by_day[d].get("leverage") for d in days]
-    daily_cushion = [by_day[d].get("cushion") for d in days]
 
     # Current values
     current = snapshots[-1]

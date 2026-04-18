@@ -3,8 +3,7 @@
 All sourced from yfinance .info dict. Light formatting over cached data.
 """
 
-from i18n import t
-from formatters import fmt_pct, fmt_ratio, fmt_num, fmt_cap
+from formatters import fmt_num
 
 
 def _row(label: str, value: str) -> str:
