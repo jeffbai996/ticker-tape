@@ -217,6 +217,21 @@ Tools are defined once in a provider-agnostic registry and translated to each pr
 | `c` | Ticker | Toggle compact mode |
 | `l` | Ticker | Switch language (en/zh) |
 
+## Deep-Dive Analysis
+
+`analyze <target>` (alias: `dive`) runs a doc-grade memo via Gemini Pro with full tool access and Google grounding. Memos stream to the terminal in real time and are archived to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter.
+
+```
+analyze TSLA                    # symbol dive
+analyze rotation                # thesis dive (requires thesis key in config)
+analyze MSFT earnings             # symbol with angle hint
+analyze "why is XLU up"         # freeform — nests under _freeform/<hash>/
+```
+
+Each memo follows a fixed six-section structure: **Context**, **What Changed Since Last Memo**, **Current Read**, **Risks / Disconfirming Evidence**, **Suggested Actions**, **Sources**. The system prompt forces a `High/Medium/Low conviction` phrasing so conviction level and key claim can be extracted into front-matter — this lets the index (`_index.json`) surface a timeline view without re-reading every memo.
+
+Prior memos for the same target are loaded into the system prompt (newest 5), so re-running `analyze TSLA` a month later produces a "since last memo" update rather than a restart. Backend errors are caught and written as error memos (conviction=unknown) so failures stay auditable in the archive.
+
 ## Status Bar
 
 Scrolling top bar with global indices (S&P, Nasdaq, HSI, VIX, WTI, Brent, Gold, Silver, Natgas) and local ET clock. Character-level scroll using Rich `Text` object slicing to preserve per-segment coloring. Off-hours swaps to futures tickers (ES=F, NQ=F). VIX and natgas color-coded by absolute level (green/yellow/red thresholds). NYSE holiday detection with orange "HOLIDAY" tag.

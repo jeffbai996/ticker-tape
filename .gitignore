@@ -9,6 +9,9 @@ __pycache__/
 *.db
 .DS_Store
 .pytest_cache/
-data/
+data/*
+!data/analyses/
+data/analyses/*
+!data/analyses/.gitkeep
 .locale
 .compact_mode
