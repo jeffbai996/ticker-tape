@@ -1,5 +1,5 @@
 # ticker-tape — Interactive CLI Trading Terminal
-*v2.5.5*
+*v2.6*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -303,6 +303,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v2.6** (2026-04-19) — **Deep-dive analysis.** New `analyze <target>` command (alias: `dive`) runs doc-grade memos via Gemini Pro with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter; prior memos load into the system prompt for "since last memo" continuity. Routes symbol / thesis / freeform targets under their own slug. Conviction level extracted into front-matter for timeline views. Error memos written on backend failure so failures stay auditable. Chat rendering: negative lookahead added to cross-line-bold fix so adjacent bold-prefixed list items stop collapsing onto one line (Gemini Pro dense-list regression).
 
 **v2.5.5** (2026-04-16) — View polish sweep. **Thesis compact**: %H / %R pulled left 1 cell each. **Commodities**: name column tightened 3 cells. **Correlation matrix**: proper heatmap — amber band for 0.6-0.8 ("hidden beta" zone), dim amber for 0.4-0.6, white 0.2-0.4; legend updated. **Earnings surprises**: full rewrite — $ sign in its own column with `-$` leading negatives, Beat %/detail treated as fixed-width pair so subsequent columns don't shift, all percentages right-justified on visible width not markup-wrapped length. **Valuation screen**: column spacing tightened so the row no longer spills off ~80-char panes (inter-column gap 2→1, Chg% built from raw pct not `color_pct` helper). **IBKR consolidated view**: third purple "Combined" section for cross-account NLV/Leverage/Margin Util, positions table P&L sign aligned in its own column (all +/- glyphs in one vertical line regardless of magnitude), column headers shifted left to align with data, USD/TWD added as relevant FX pair. **P&L view**: stripped redundant "of NLV" suffix from daily P&L parenthetical. **Briefing AI**: `brief ai` now routes directly through Gemini Flash backend instead of the user's currently-selected chat model (was broken if user was on non-Gemini model).
 
