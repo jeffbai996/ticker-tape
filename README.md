@@ -21,6 +21,8 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 **Morning Briefing**: `brief` assembles portfolio health, macro context (10 indicators — DXY, 10Y, BTC included), watchlist movers, sector snapshot, news headlines per top mover, upcoming earnings with EPS estimates. `brief ai` adds AI synthesis
 **Position Sizing**: `size SYM QTY` runs IBKR what-if with concentration and cushion analysis
 **Earnings Tracker**: `surprises` shows watchlist-wide EPS beat/miss history with persistence to SQLite
+**Deep-Dive Analysis**: `analyze <target>` runs a Gemini Pro memo with full tool access and Google grounding; memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity
+**Archive Navigation**: `memos` / `memo` commands let you browse and reopen past memos inside the TUI — per-slug listings with conviction-color badges, banner view with front-matter, body rendered through the same markdown pipeline as a live analyze
 **i18n**: Full English/Chinese with 500+ translation keys, CJK-aware column padding via `pad()`
 
 ## Screens
@@ -41,8 +43,10 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 | **Screening** | Quick multi-symbol comparison table for filtering ideas |
 | **Timeline** | 90-day NLV ASCII chart with drawdown from peak, leverage trend, cushion |
 | **Surprises** | Watchlist-wide earnings surprise history: EPS beat/miss, price reaction, streaks |
+| **Impact** | Per-symbol historical earnings reactions: EPS surprise, next-day price move, beat streak, beat rate |
 | **Sizing** | Pre-trade what-if: margin impact, concentration weight, cushion before/after |
 | **Briefing** | Morning briefing: portfolio health, macro (10 indicators incl. DXY/10Y/BTC), movers, sector snapshot, news headlines per top mover, earnings with EPS estimates |
+| **Archive** | Browse written analyze memos: slug list with counts/dates, per-slug numbered listing with conviction color + key claim, reopen view with front-matter banner |
 
 ## AI Chat
 
@@ -232,6 +236,22 @@ Each memo follows a fixed six-section structure: **Context**, **What Changed Sin
 
 Prior memos for the same target are loaded into the system prompt (newest 5), so re-running `analyze AVGO` a month later produces a "since last memo" update rather than a restart. Backend errors are caught and written as error memos (conviction=unknown) so failures stay auditable in the archive.
 
+### Archive Navigation
+
+Read what you've written. All commands are disk-only — no AI calls, no tokens spent.
+
+```
+memos                           # list all slugs (memo count + newest date)
+memos AVGO                      # list AVGO memos, newest first, with index + conviction
+memo 1                          # reopen memo #1 from the last listing
+memo latest                     # reopen the newest memo across the archive
+memo latest AVGO                # reopen the newest memo for a slug
+```
+
+Slug resolution: uppercase → symbol (`memos avgo` → `AVGO`), lowercase → thesis, `_freeform/<hash>` → freeform. Unknown slug shows a dim not-found message; out-of-range `memo N` reports the last listing size so you can retry.
+
+The reopen view starts with a banner (target · date · conviction-colored badge · key claim · angle · model · prior-memo count), then streams the body through the same markdown renderer used for a live analyze. Error memos surface with a `UNKNOWN` dim badge so failed runs remain visible in the timeline.
+
 ## Status Bar
 
 Scrolling top bar with global indices (S&P, Nasdaq, HSI, VIX, WTI, Brent, Gold, Silver, Natgas) and local ET clock. Character-level scroll using Rich `Text` object slicing to preserve per-segment coloring. Off-hours swaps to futures tickers (ES=F, NQ=F). VIX and natgas color-coded by absolute level (green/yellow/red thresholds). NYSE holiday detection with orange "HOLIDAY" tag.
@@ -287,7 +307,8 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `mcp` — IBKR MCP client (streamable HTTP, multi-account)
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
-- `pytest` — 593 tests covering data layer, formatters, screens, chat, tool registry, journal, memory tags, MCP pipeline, smart alerts, db persistence
+- `pyyaml` — Analyze memo front-matter serialization
+- `pytest` — 706 tests covering data layer, formatters, screens, chat, tool registry, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views
 
 ## Demo
 
