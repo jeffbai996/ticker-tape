@@ -86,7 +86,39 @@ def format_slug_memos(slug: str, entries: list[dict],
     return "\n".join(lines)
 
 
-def format_memo_view(memo_data: dict) -> str:
-    """Render a single memo's full content (analysis, conviction, etc)."""
-    # Placeholder for Task 5
-    pass
+def format_memo_view(memo: dict) -> str:
+    """Render a reopened memo: banner from front-matter + body via _md_to_rich."""
+    # Lazy import to keep this module free of heavy deps at import time.
+    from screens.chat_screen import _md_to_rich
+
+    fm = memo.get("front_matter") or {}
+    body = memo.get("body") or ""
+
+    target = fm.get("target", "?")
+    # Date: "2026-04-19T14:23:00-04:00" → "2026-04-19 14:23"
+    raw_date = fm.get("date", "")
+    date_display = raw_date[:10] + " " + raw_date[11:16] if len(raw_date) >= 16 else raw_date
+
+    conv = fm.get("conviction") or {}
+    conv_level = (conv.get("level") or "unknown").lower()
+    conv_label = conv_level.upper()
+    conv_color = format_conviction_color(conv_level)
+    key_claim = conv.get("key_claim", "") or ""
+
+    angle = fm.get("angle", "general")
+    model = fm.get("model", "?")
+    prior_count = len(fm.get("prior_memos") or [])
+
+    if conv_color == "dim":
+        conv_badge = f"[dim]{conv_label}[/]"
+    else:
+        conv_badge = f"[{conv_color}]{conv_label}[/]"
+
+    banner = (
+        f"\n[bold {_HEADER_COLOR}]═══ {escape(target)} — {escape(date_display)} ═══[/]\n"
+        f"  Conviction: {conv_badge} — {escape(key_claim)}\n"
+        f"  Angle: {escape(angle)} · Model: {escape(model)} · {prior_count} prior memos\n"
+    )
+
+    rendered_body = _md_to_rich(body) if body.strip() else ""
+    return banner + "\n" + rendered_body

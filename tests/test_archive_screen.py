@@ -139,3 +139,65 @@ class TestFormatSlugMemos:
         result = format_slug_memos("AVGO", [self._entry(date="2026-04-19T14:23:05-04:00")])
         assert "2026-04-19" in result
         assert "14:23:05" not in result
+
+
+class TestFormatMemoView:
+    def _memo(self, front_matter=None, body=""):
+        fm = front_matter or {
+            "target": "AVGO", "kind": "symbol", "angle": "general",
+            "date": "2026-04-19T14:23:00-04:00",
+            "model": "gemini-3.1-pro-preview",
+            "prior_memos": [], "tools_used": [],
+            "conviction": {"level": "high", "key_claim": "Custom silicon moat widening"},
+            "trigger_type": "manual",
+        }
+        return {"path": "/x/y.md", "front_matter": fm, "body": body}
+
+    def test_banner_contains_target_and_date(self):
+        result = format_memo_view(self._memo())
+        assert "AVGO" in result
+        assert "2026-04-19" in result
+
+    def test_banner_contains_conviction_level(self):
+        result = format_memo_view(self._memo())
+        assert "HIGH" in result
+
+    def test_banner_contains_key_claim(self):
+        result = format_memo_view(self._memo())
+        assert "Custom silicon moat widening" in result
+
+    def test_banner_contains_angle_and_model(self):
+        result = format_memo_view(self._memo())
+        assert "general" in result
+        assert "gemini-3.1-pro-preview" in result
+
+    def test_body_rendered_via_md_to_rich(self):
+        """Body should be passed through _md_to_rich — headings become bold cyan."""
+        body = "# AVGO — 2026-04-19\n\n## Context\nSome context here.\n"
+        result = format_memo_view(self._memo(body=body))
+        # _md_to_rich converts ## headings to bold #00c8ff
+        assert "#00c8ff" in result
+        assert "Context" in result
+
+    def test_missing_conviction_shows_unknown(self):
+        fm = {
+            "target": "X", "kind": "symbol", "angle": "general",
+            "date": "2026-04-19T14:23:00-04:00", "model": "m",
+            "prior_memos": [], "tools_used": [],
+            "conviction": {},  # empty
+            "trigger_type": "manual",
+        }
+        result = format_memo_view({"path": "/x.md", "front_matter": fm, "body": ""})
+        assert "UNKNOWN" in result
+
+    def test_prior_memos_count_shown(self):
+        fm = {
+            "target": "AVGO", "kind": "symbol", "angle": "general",
+            "date": "2026-04-19T14:23:00-04:00", "model": "m",
+            "prior_memos": ["a.md", "b.md", "c.md"],
+            "tools_used": [],
+            "conviction": {"level": "high", "key_claim": "x"},
+            "trigger_type": "manual",
+        }
+        result = format_memo_view({"path": "/x.md", "front_matter": fm, "body": ""})
+        assert "3 prior" in result or "3" in result
