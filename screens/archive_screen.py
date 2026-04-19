@@ -2,6 +2,7 @@
 
 from rich.markup import escape
 
+from archive import format_conviction_color
 from i18n import t
 
 
@@ -41,10 +42,48 @@ def format_archive_list(index: dict) -> str:
     return "\n".join(lines)
 
 
-def format_slug_memos(slug: str, entries: list[dict]) -> str:
+# Fixed column widths chosen to leave room for a key_claim that can eat
+# the remainder of the terminal. Sum of leading columns + padding =
+# approx 30 chars, so key_claim gets ~terminal_width - 30.
+_CLAIM_FIXED_BUDGET = 30
+_DEFAULT_TERMINAL_WIDTH = 120
+
+
+def _truncate(s: str, limit: int) -> str:
+    """Truncate with ellipsis so the visible length is `limit` chars."""
+    if limit <= 1:
+        return "…" if s else ""
+    if len(s) <= limit:
+        return s
+    return s[: limit - 1] + "…"
+
+
+def format_slug_memos(slug: str, entries: list[dict],
+                      terminal_width: int = _DEFAULT_TERMINAL_WIDTH) -> str:
     """Render all memos for a given slug (list view before opening one)."""
-    # Placeholder for Task 4
-    pass
+    if not entries:
+        msg = t("archive.not_found").replace("{slug}", slug)
+        return f"[dim]{escape(msg)}[/]"
+
+    claim_budget = max(20, terminal_width - _CLAIM_FIXED_BUDGET)
+
+    lines = [
+        f"\n[bold {_HEADER_COLOR}]═══ {t('archive.header')} — {escape(slug)} ═══[/]",
+        f"[bold]  {'#':<3}{'DATE':<12}{'CONV':<8}KEY CLAIM[/]",
+    ]
+    for i, entry in enumerate(entries, start=1):
+        date = entry["date"][:10]
+        conv_level = (entry.get("conviction") or {}).get("level", "unknown") or "unknown"
+        conv_label = conv_level.upper()
+        conv_color = format_conviction_color(conv_level)
+        claim = (entry.get("conviction") or {}).get("key_claim", "") or ""
+        claim = _truncate(claim, claim_budget)
+        if conv_color == "dim":
+            conv_markup = f"[dim]{conv_label:<7}[/]"
+        else:
+            conv_markup = f"[{conv_color}]{conv_label:<7}[/]"
+        lines.append(f"  {i:<3}{date:<12}{conv_markup} {escape(claim)}")
+    return "\n".join(lines)
 
 
 def format_memo_view(memo_data: dict) -> str:

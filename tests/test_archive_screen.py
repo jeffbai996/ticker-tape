@@ -85,3 +85,57 @@ class TestFormatArchiveList:
         }
         result = format_archive_list(index)
         assert "_freeform/ae098c01" in result
+
+
+class TestFormatSlugMemos:
+    def _entry(self, level="high", claim="c", date="2026-04-19T14:00:00-04:00"):
+        return {
+            "date": date, "path": "AVGO/a.md",
+            "target": "AVGO", "kind": "symbol",
+            "conviction": {"level": level, "key_claim": claim},
+            "summary": "s",
+        }
+
+    def test_empty_entries_shows_not_found(self):
+        result = format_slug_memos("FOO", [])
+        assert "FOO" in result
+
+    def test_header_shows_slug(self):
+        result = format_slug_memos("AVGO", [self._entry()])
+        assert "AVGO" in result
+
+    def test_numbered_rows_start_at_1(self):
+        entries = [self._entry(), self._entry(), self._entry()]
+        result = format_slug_memos("AVGO", entries)
+        body_rows = [l for l in result.split("\n") if "2026-04-19" in l]
+        assert len(body_rows) == 3
+        assert body_rows[0].lstrip().startswith("1")
+        assert body_rows[-1].lstrip().startswith("3")
+
+    def test_conviction_high_green(self):
+        result = format_slug_memos("AVGO", [self._entry(level="high")])
+        assert "#32ff32" in result
+
+    def test_conviction_medium_amber(self):
+        result = format_slug_memos("AVGO", [self._entry(level="medium")])
+        assert "#ffc800" in result
+
+    def test_conviction_low_red(self):
+        result = format_slug_memos("AVGO", [self._entry(level="low")])
+        assert "#ff3232" in result
+
+    def test_conviction_unknown_dim(self):
+        result = format_slug_memos("AVGO", [self._entry(level="unknown")])
+        assert "[dim]" in result
+
+    def test_long_key_claim_truncated_with_ellipsis(self):
+        long_claim = "x" * 500
+        result = format_slug_memos("AVGO", [self._entry(claim=long_claim)])
+        assert "…" in result
+        assert "x" * 500 not in result
+
+    def test_date_is_YYYY_MM_DD_only(self):
+        """Per-slug table shows date only, not the full ISO timestamp."""
+        result = format_slug_memos("AVGO", [self._entry(date="2026-04-19T14:23:05-04:00")])
+        assert "2026-04-19" in result
+        assert "14:23:05" not in result
