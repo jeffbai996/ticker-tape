@@ -1,5 +1,5 @@
 # ticker-tape — Interactive CLI Trading Terminal
-*v2.6*
+*v2.6.1*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -303,6 +303,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v2.6.1** (2026-04-19) — Archive navigation. `memos` lists archived slugs (count + newest date); `memos <slug>` shows each memo's date, conviction level, and key claim with an index column. `memo <N>` reopens memo #N from the last listing; `memo latest [slug]` jumps to the newest. Banner shows date, conviction, angle, model; body rendered through _md_to_rich so it flows like a fresh analyze. Read-only — no AI calls, no archive modification.
 
 **v2.6** (2026-04-19) — **Deep-dive analysis.** New `analyze <target>` command (alias: `dive`) runs doc-grade memos via Gemini Pro with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter; prior memos load into the system prompt for "since last memo" continuity. Routes symbol / thesis / freeform targets under their own slug. Conviction level extracted into front-matter for timeline views. Error memos written on backend failure so failures stay auditable. Chat rendering: negative lookahead added to cross-line-bold fix so adjacent bold-prefixed list items stop collapsing onto one line (Gemini Pro dense-list regression).
 
