@@ -51,6 +51,47 @@ class TestParsePnl:
         assert "3,934,348" in rendered or "3,934,347" in rendered
         assert "+0" in rendered or "0" in rendered
 
+    def test_captures_daily_pct_from_parenthetical(self):
+        """Daily P&L's '(-1.23% of NLV)' suffix should populate daily_pnl_pct."""
+        raw = "**Daily P&L**: $-147,179.71 CAD (-1.23% of NLV)\n"
+        out = Sidebar._parse_pnl(raw)
+        assert out["daily_pnl"] == -147179.71
+        assert out["daily_pnl_pct"] == -1.23
+
+    def test_captures_positive_daily_pct(self):
+        raw = "**Daily P&L**: $50,000.00 USD (+0.85% of NLV)\n"
+        out = Sidebar._parse_pnl(raw)
+        assert out["daily_pnl_pct"] == 0.85
+
+    def test_no_daily_pct_when_parenthetical_absent(self):
+        raw = "**Daily P&L**: $100.00\n"
+        out = Sidebar._parse_pnl(raw)
+        assert "daily_pnl_pct" not in out
+
+    def test_build_pnl_renders_total_and_pct_rows(self):
+        """Total = unreal + real; Day% pulled from parenthetical."""
+        raw = (
+            "**Daily P&L**: $-50,000.00 USD (-1.00% of NLV)\n"
+            "**Unrealized P&L**: $200,000.00 USD\n"
+            "**Realized P&L**: $-30,000.00 USD\n"
+        )
+        parsed = Sidebar._parse_pnl(raw)
+        sb = Sidebar.__new__(Sidebar)
+        rendered = sb._build_pnl(parsed)
+        # Day% row
+        assert "-1.00%" in rendered
+        # Total = 200000 + (-30000) = 170000
+        assert "170,000" in rendered
+
+    def test_build_pnl_skips_total_when_components_missing(self):
+        """No Total row if either unrealized or realized is absent."""
+        raw = "**Daily P&L**: $100.00 USD\n"
+        parsed = Sidebar._parse_pnl(raw)
+        sb = Sidebar.__new__(Sidebar)
+        rendered = sb._build_pnl(parsed)
+        # Total label shouldn't appear
+        assert "Total" not in rendered
+
 
 # ── _parse_account_summary ────────────────────────────────
 
@@ -92,3 +133,74 @@ class TestParseAccountSummary:
         out = Sidebar._parse_account_summary(raw)
         assert out["cushion"] == 0.42
         assert out["leverage"] == 1.8
+
+    def test_extended_summary_fields_parsed(self):
+        """Margin util, excess liquidity, buying power round-trip into the dict."""
+        raw = (
+            "**Net Liquidation Value**: $5,000,000.00 CAD\n"
+            "**Gross Position Value**: $7,500,000.00 CAD\n"
+            "**Total Cash**: $-1,000,000.00 CAD\n"
+            "**Initial Margin Req**: $1,500,000.00 CAD\n"
+            "**Maintenance Margin Req**: $1,200,000.00 CAD\n"
+            "**Excess Liquidity (Initial)**: $2,000,000.00 CAD\n"
+            "**Excess Liquidity (Maint)**: $2,300,000.00 CAD\n"
+            "**Cushion**: 18.5%\n"
+            "**Buying Power**: $10,000,000.00 CAD\n"
+            "**Leverage**: 1.5x\n"
+            "**Margin Utilization**: 30.0%\n"
+        )
+        out = Sidebar._parse_account_summary(raw)
+        assert out["net_liquidation_value"] == 5_000_000.0
+        assert out["gross_position_value"] == 7_500_000.0
+        assert out["initial_margin_req"] == 1_500_000.0
+        assert out["maintenance_margin_req"] == 1_200_000.0
+        # Parens are kept in the key after lowercase + underscore
+        assert out["excess_liquidity_(maint)"] == 2_300_000.0
+        assert out["excess_liquidity_(initial)"] == 2_000_000.0
+        assert out["buying_power"] == 10_000_000.0
+        assert out["margin_utilization"] == 30.0
+
+    def test_build_risk_renders_all_added_rows(self):
+        """All six panel rows surface when the summary is fully populated."""
+        raw = (
+            "**Net Liquidation Value**: $5,000,000.00 CAD\n"
+            "**Excess Liquidity (Maint)**: $2,300,000.00 CAD\n"
+            "**Cushion**: 18.5%\n"
+            "**Buying Power**: $10,000,000.00 CAD\n"
+            "**Leverage**: 1.5x\n"
+            "**Margin Utilization**: 30.0%\n"
+        )
+        parsed = Sidebar._parse_account_summary(raw)
+        sb = Sidebar.__new__(Sidebar)
+        rendered = sb._build_risk(parsed)
+        # NLV + Cushion + Lever + MgnU% + ExLiq + BuyPwr → 6 metric rows
+        assert "$5.0M" in rendered            # NLV
+        assert "18.5%" in rendered            # Cushion
+        assert "1.5x" in rendered             # Leverage
+        assert "30.0%" in rendered            # Margin util
+        assert "$2.3M" in rendered            # Excess liq (maint)
+        assert "$10.0M" in rendered           # Buying power
+
+    def test_build_risk_falls_back_to_initial_excess_when_maint_absent(self):
+        raw = (
+            "**Net Liquidation Value**: $5,000,000.00 CAD\n"
+            "**Excess Liquidity (Initial)**: $1,800,000.00 CAD\n"
+            "**Cushion**: 18.5%\n"
+            "**Leverage**: 1.5x\n"
+        )
+        parsed = Sidebar._parse_account_summary(raw)
+        sb = Sidebar.__new__(Sidebar)
+        rendered = sb._build_risk(parsed)
+        assert "$1.8M" in rendered
+
+    def test_build_risk_skips_missing_rows(self):
+        """Sparse summary → only present fields render. No "—" placeholders."""
+        raw = "**Cushion**: 18.5%\n**Leverage**: 1.5x\n"
+        parsed = Sidebar._parse_account_summary(raw)
+        sb = Sidebar.__new__(Sidebar)
+        rendered = sb._build_risk(parsed)
+        assert "18.5%" in rendered
+        assert "1.5x" in rendered
+        # No buying power / NLV labels when the data isn't there
+        assert "BuyPwr" not in rendered
+        assert "ExLiq" not in rendered
