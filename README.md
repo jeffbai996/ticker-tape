@@ -12,18 +12,32 @@ Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat
 
 Built on Textual (Python TUI framework) with Rich markup rendering. Data layer uses yfinance with a TTL-cached info pipeline and parallel batch fetching via `ThreadPoolExecutor`. IBKR integration through MCP streamable HTTP with multi-account support.
 
-**Refresh**: 30-second quote cycle, parallel sparkline fetches (6 workers), quotes display before charts load
-**Cache**: 10-second TTL on `.info` calls, 120s on technicals, 60s on benchmark history — eliminates redundant yfinance requests across sidebar, thesis, and lookup views
-**Compact mode**: Toggle with `c` — two-line-per-symbol view with sparklines, earnings, technicals, and sidebar watchlist. Auto-enables on narrow terminals
-**Watchlist groups**: Named symbol groups with sidebar headers, synced to thesis buckets at runtime
-**Alerts**: Smart alerts — price levels, RSI thresholds, SMA crossovers, volume spikes, margin cushion. Fire-once trigger with auto-removal. Technical alerts on 60s eval cycle
-**NLV History**: SQLite-backed NLV snapshots every 60s via peewee ORM (WAL mode). `timeline` shows 90-day ASCII chart with drawdown and leverage trend
-**Morning Briefing**: `brief` assembles portfolio health, macro context (10 indicators — DXY, 10Y, BTC included), watchlist movers, sector snapshot, news headlines per top mover, upcoming earnings with EPS estimates. `brief ai` adds AI synthesis
-**Position Sizing**: `size SYM QTY` runs IBKR what-if with concentration and cushion analysis
-**Earnings Tracker**: `surprises` shows watchlist-wide EPS beat/miss history with persistence to SQLite
-**Deep-Dive Analysis**: `analyze <target>` runs a Gemini Pro memo with full tool access and Google grounding; memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity
-**Archive Navigation**: `memos` / `memo` commands let you browse and reopen past memos inside the TUI — per-slug listings with conviction-color badges, banner view with front-matter, body rendered through the same markdown pipeline as a live analyze
-**i18n**: Full English/Chinese with 500+ translation keys, CJK-aware column padding via `pad()`
+### Performance
+
+- **Refresh** — 30-second quote cycle, parallel sparkline fetches (6 workers); quotes display before charts load.
+- **Cache** — 10s TTL on `.info` calls, 120s on technicals, 60s on benchmark history. Eliminates redundant yfinance requests across sidebar, thesis, and lookup views.
+
+### Display
+
+- **Compact mode** — Toggle with `c` for a two-line-per-symbol view with sparklines, earnings, technicals, and sidebar watchlist. Auto-enables on narrow terminals.
+- **Watchlist groups** — Named symbol groups with sidebar headers, synced to thesis buckets at runtime.
+- **i18n** — Full English/Chinese with 500+ translation keys, CJK-aware column padding via `pad()`.
+
+### Monitoring
+
+- **Alerts** — Smart alerts on price levels, RSI thresholds, SMA crossovers, volume spikes, and margin cushion. Fire-once trigger with auto-removal; technical alerts on a 60s eval cycle.
+- **NLV History** — SQLite-backed NLV snapshots every 60s via peewee ORM (WAL mode). `timeline` shows a 90-day ASCII chart with drawdown and leverage trend.
+
+### Trading workflows
+
+- **Morning Briefing** — `brief` assembles portfolio health, macro context (10 indicators including DXY, 10Y, BTC), watchlist movers, sector snapshot, news headlines per top mover, and upcoming earnings with EPS estimates. `brief ai` adds AI synthesis.
+- **Position Sizing** — `size SYM QTY` runs an IBKR what-if with concentration and cushion analysis.
+- **Earnings Tracker** — `surprises` shows watchlist-wide EPS beat/miss history with persistence to SQLite.
+
+### Research & memos
+
+- **Deep-Dive Analysis** — `analyze <target>` runs a Gemini Pro memo with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity.
+- **Archive Navigation** — `memos` / `memo` commands browse and reopen past memos inside the TUI: per-slug listings with conviction-color badges, banner view with front-matter, body rendered through the same markdown pipeline as a live analyze.
 
 ## Screens
 
