@@ -1,4 +1,4 @@
-# ticker-tape — Interactive CLI Trading Terminal
+# ticker-tape — Financial Data Terminal
 *v2.6.1*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
@@ -74,7 +74,7 @@ Seven models across three providers — switch mid-conversation with `model`.
 | Sonnet 4.6 | Anthropic | 4,000 | 180K | Balanced |
 | Opus 4.6 | Anthropic | 8,000 | 180K | Strongest reasoning |
 | GPT-5.4 mini | OpenAI | — | 120K | Fast GPT |
-| GPT-5.4 | OpenAI | — | 120K | Full GPT |
+| GPT-5.5 | OpenAI | — | 120K | Full GPT |
 
 ```
 ticker> model
@@ -88,7 +88,7 @@ Type 'model' to list, 'model <name>' to switch.
     sonnet       Sonnet 4.6                claude-sonnet-4-6              ✓
     opus         Opus 4.6                  claude-opus-4-6                ✓
     gpt-mini     GPT-5.4 mini              gpt-5.4-mini                   ✓
-    gpt          GPT-5.4                   gpt-5.4                        ✓
+    gpt          GPT-5.5                   gpt-5.5                        ✓
 ```
 
 ### Context System
@@ -136,7 +136,7 @@ Conversation history persists to disk across sessions and model switches. `histo
 ticker> history
 
 ═══ HISTORY (12 turns, page 1/2) ═══
-  Opus $0.03  Sonnet $0.01  Haiku $0.00  5.4 $0.00  5.4m $0.00  Gemini $0.02
+  Opus $0.03  Sonnet $0.01  Haiku $0.00  5.5 $0.00  5.4m $0.00  Gemini $0.02
   ~8.2K tokens  ~$0.06
 
   1  Q: what do you think about AMZN's setup going into earnings?
@@ -154,7 +154,7 @@ history 2 · peek N · search <term> · delete N[-M] · compact · clear
 
 ### Chain-of-Thought, Search & Token Usage
 
-Models with thinking budgets or reasoning effort (Gemini Flash, Gemini Pro, Claude Sonnet, Claude Opus, GPT-5.4, GPT-5.4 mini) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
+Models with thinking budgets or reasoning effort (Gemini Flash, Gemini Pro, Claude Sonnet, Claude Opus, GPT-5.5, GPT-5.4 mini) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
 
 **Native web search** fires automatically when a model needs current information. Each provider uses its own search: Claude uses `web_search`, Gemini uses Google Search with grounding metadata, GPT uses the Responses API `web_search`. Search indicators appear inline during thinking. Citation markers are stripped from final output.
 
