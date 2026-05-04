@@ -72,7 +72,7 @@ Seven models across three providers — switch mid-conversation with `model`.
 | Gemini Pro | Google | 2,000 | 900K | Deep analysis |
 | Haiku 4.5 | Anthropic | — | 200K | Fast summarization |
 | Sonnet 4.6 | Anthropic | 4,000 | 180K | Balanced |
-| Opus 4.6 | Anthropic | 8,000 | 180K | Strongest reasoning |
+| Opus 4.7 | Anthropic | 8,000 | 180K | Strongest reasoning |
 | GPT-5.4 mini | OpenAI | — | 120K | Fast GPT |
 | GPT-5.5 | OpenAI | — | 120K | Full GPT |
 
@@ -86,7 +86,7 @@ Type 'model' to list, 'model <name>' to switch.
     pro          Gemini Pro                gemini-3.1-pro-preview         ✓
     haiku        Haiku 4.5                 claude-haiku-4-5-20251001      ✓
     sonnet       Sonnet 4.6                claude-sonnet-4-6              ✓
-    opus         Opus 4.6                  claude-opus-4-6                ✓
+    opus         Opus 4.7                  claude-opus-4-7                ✓
     gpt-mini     GPT-5.4 mini              gpt-5.4-mini                   ✓
     gpt          GPT-5.5                   gpt-5.5                        ✓
 ```
