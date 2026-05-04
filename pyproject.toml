@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ticker-tape"
+version = "2.6.1"
+description = "Bloomberg-lite financial data terminal — Textual TUI with thesis views, technicals, AI chat, and IBKR portfolio integration"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+keywords = ["finance", "tui", "yfinance", "ibkr", "trading", "bloomberg", "textual"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console :: Curses",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+dependencies = [
+    # TUI + display
+    "textual>=0.80",
+    "rich>=13.7",
+    # Data sources
+    "yfinance>=0.2.50",
+    "pandas>=2.0",
+    "numpy>=1.26",
+    # Storage / config
+    "peewee>=3.17",
+    "python-dotenv>=1.0",
+    # IBKR MCP transport
+    "httpx>=0.27",
+    "mcp>=1.0",
+    # AI providers
+    "google-genai>=1.0",
+    "anthropic>=0.40",
+    # Optional but commonly imported
+    "beautifulsoup4>=4.12",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+ticker-tape = "app:main"
+ticker-tape-cli = "cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jeffbai996/ticker-tape"
+Issues = "https://github.com/jeffbai996/ticker-tape/issues"
+
+[tool.setuptools]
+# Flat-script layout: ship every top-level .py file as a module, plus the
+# `screens/` package and assets that the TUI loads at runtime.
+py-modules = [
+    "app", "cli", "analyze", "archive", "chat", "config", "data", "db",
+    "econ_calendar", "formatters", "i18n", "ibkr_client", "journal",
+    "json_store", "memory",
+]
+
+[tool.setuptools.packages.find]
+include = ["screens*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.tcss"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
