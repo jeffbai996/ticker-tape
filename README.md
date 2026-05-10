@@ -25,6 +25,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ### Monitoring
 
+- **Stale-data banner** — When the last successful quote fetch is more than 5 minutes old (connection issue, throttle, IBKR session drop, etc.), a red `⚠ STALE — last good fetch Xm ago` banner appears at the top of the watchlist. Frozen prices stay visible underneath but it's unmistakable that they shouldn't be acted on.
 - **Alerts** — Smart alerts on price levels, RSI thresholds, SMA crossovers, volume spikes, and margin cushion. Fire-once trigger with auto-removal; technical alerts on a 60s eval cycle.
 - **NLV History** — SQLite-backed NLV snapshots every 60s via peewee ORM (WAL mode). `timeline` shows a 90-day ASCII chart with drawdown and leverage trend.
 
