@@ -83,7 +83,7 @@ ticker> model
 ═══ MODELS ═══
 Type 'model' to list, 'model <name>' to switch.
 
-  ◆ flash        Gemini Flash              gemini-3-flash-preview         ✓
+  ◆ flash        Gemini Flash              gemini-3.5-flash               ✓
     pro          Gemini Pro                gemini-3.1-pro-preview         ✓
     haiku        Haiku 4.5                 claude-haiku-4-5-20251001      ✓
     sonnet       Sonnet 4.6                claude-sonnet-4-6              ✓
