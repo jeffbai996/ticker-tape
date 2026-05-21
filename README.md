@@ -96,15 +96,15 @@ Type 'model' to list, 'model <name>' to switch.
 
 The AI assistant has a layered context system — it knows who you are, what the market is doing, and what you've told it before.
 
-**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, condensed account summaries (NLV, leverage, margin cushion, top holdings) from all configured accounts are fetched in parallel and injected. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first. Anthropic calls use prompt caching on the system block — the static persona and context are written once and read at 90% discount on subsequent turns.
+**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, condensed account summaries (NLV, leverage, margin cushion, top holdings) from all configured accounts are fetched in parallel and injected. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first. Anthropic calls split the system prompt into a stable persona block (cached, ~90% read discount on subsequent turns) and a volatile live-data block (fresh every turn). Gemini calls similarly cache the stable prefix when above the per-model token threshold.
 
 **Slash commands** — Feed specific data to the AI mid-conversation: `/ta AAPL` runs technicals and injects the output, `/pos` pulls IBKR positions, `/acct` gets account summary. The AI analyzes the data in context.
 
-**Web search** — When the AI needs current information beyond what's in context, it searches the web automatically via Tavily (optimized for LLM consumption — returns clean extracted text, not raw HTML) with DuckDuckGo as a free fallback. No manual trigger required.
+**Web search** — When the AI needs current information beyond what's in context, it searches the web automatically: Anthropic models use their native `web_search` tool (capped at 2 searches per turn to bound cost), Gemini grounds via Google Search, and OpenAI/other paths fall back to Tavily (optimized for LLM consumption) with DuckDuckGo as a free fallback. No manual trigger required.
 
 ### Image Input
 
-Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all seven models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual.
+Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all seven models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual. Hard cap at 2 MB per image (override with `TICKERTAPE_MAX_IMAGE_BYTES`); oversize images get rejected with a notify, since image tokens add up fast — a 4K screenshot can cost ~16K input tokens *per turn the conversation references it*.
 
 ### Memory
 
