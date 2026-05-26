@@ -72,8 +72,8 @@ Seven models across three providers — switch mid-conversation with `model`.
 | Gemini Flash | Google | — | 900K | Fast answers, cheapest |
 | Gemini Pro | Google | 2,000 | 900K | Deep analysis |
 | Haiku 4.5 | Anthropic | — | 200K | Fast summarization |
-| Sonnet 4.6 | Anthropic | 4,000 | 180K | Balanced |
-| Opus 4.7 | Anthropic | 8,000 | 180K | Strongest reasoning |
+| Sonnet 4.6 | Anthropic | 4,000 | 200K | Balanced |
+| Opus 4.7 | Anthropic | 8,000 | 200K | Strongest reasoning |
 | GPT-5.4 mini | OpenAI | — | 120K | Fast GPT |
 | GPT-5.5 | OpenAI | — | 120K | Full GPT |
 
