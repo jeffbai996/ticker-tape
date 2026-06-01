@@ -18,3 +18,6 @@ data/analyses/*
 !data/analyses/.gitkeep
 .locale
 .compact_mode
+
+# secrets-bearing backups (never commit)
+.env.bak*
