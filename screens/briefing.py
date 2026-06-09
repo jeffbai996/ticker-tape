@@ -1,5 +1,6 @@
 """Morning briefing screen — portfolio health, movers, earnings, macro context, news, sectors."""
 
+import pricing
 from formatters import pad
 from i18n import t
 
@@ -38,8 +39,8 @@ def format_briefing(data: dict) -> str:
             pc = "green" if pnl >= 0 else "#ff3232"
             pnl_str = f"[{pc}]{pnl:+,.0f}[/]"
             # Show % return if NLV available
-            if nlv and nlv > 0:
-                pnl_pct = (pnl / nlv) * 100
+            pnl_pct = pricing.pnl_pct(pnl, nlv)
+            if pnl_pct is not None:
                 pnl_str += f"  [{pc}]({pnl_pct:+.2f}%)[/]"
             row1_parts.append(f"[dim]{t('briefing.day_pnl')}[/]   {pnl_str}")
         if row1_parts:
