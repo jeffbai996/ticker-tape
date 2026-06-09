@@ -61,6 +61,7 @@ def _title(text: str) -> str:
 def cmd_thesis() -> None:
     from concurrent.futures import ThreadPoolExecutor
     import data
+    import pricing
     from screens.thesis import format_thesis
 
     symbols = data.get_all_symbols()
@@ -82,8 +83,9 @@ def cmd_thesis() -> None:
         ctx = {}
         for sym, key in syms_keys:
             pm = bp.get(sym)
-            if pm and pm[0] and pm[1]:
-                ctx[key] = {"price": pm[0], "pct": ((pm[0] - pm[1]) / pm[1]) * 100, "show_pct": True}
+            ch = pricing.daily_change(pm[0], pm[1]) if pm and pm[0] else None
+            if ch:
+                ctx[key] = {"price": pm[0], "pct": ch.pct, "show_pct": True}
         return ctx
 
     mkt_f = pool.submit(_market_ctx)
