@@ -28,6 +28,18 @@ db = SqliteDatabase(None)  # deferred — opened in init_db()
 _insert_count = 0
 
 
+def _as_float(val) -> float | None:
+    """Coerce to float, or None — keeps non-numeric garbage out of (and out
+    of reads from) the FloatField columns. SQLite happily stores strings in
+    REAL columns, so both the write and read paths guard with this."""
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
 class BaseModel(Model):
     class Meta:
         database = db
@@ -90,9 +102,9 @@ def record_nlv(
         NLVSnapshot.create(
             timestamp=datetime.now(timezone.utc),
             nlv=nlv,
-            cushion=cushion,
-            leverage=leverage,
-            daily_pnl=daily_pnl,
+            cushion=_as_float(cushion),
+            leverage=_as_float(leverage),
+            daily_pnl=_as_float(daily_pnl),
         )
         _insert_count += 1
         if _insert_count % 100 == 0:
@@ -112,10 +124,10 @@ def get_nlv_history(days: int = 90) -> list[dict]:
     return [
         {
             "timestamp": r.timestamp,
-            "nlv": r.nlv,
-            "cushion": r.cushion,
-            "leverage": r.leverage,
-            "daily_pnl": r.daily_pnl,
+            "nlv": _as_float(r.nlv),
+            "cushion": _as_float(r.cushion),
+            "leverage": _as_float(r.leverage),
+            "daily_pnl": _as_float(r.daily_pnl),
         }
         for r in rows
     ]

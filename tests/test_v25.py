@@ -68,6 +68,34 @@ class TestNLVSnapshots:
         assert history[0]["leverage"] is None
         assert history[0]["daily_pnl"] is None
 
+    def test_record_nlv_coerces_numeric_strings_and_drops_garbage(self, tmp_db):
+        """Non-numeric optional fields must become None, never reach SQLite.
+
+        Regression: the sidebar passed the raw parsed leverage ('1.8x') into
+        record_nlv; SQLite stored the string and the timeline screen's ':.1f'
+        formatting crashed with ValueError.
+        """
+        import db
+        db.record_nlv(500000.0, cushion="22.0", leverage="1.8x", daily_pnl=None)
+        row = db.get_nlv_history(days=1)[0]
+        assert row["cushion"] == 22.0       # numeric string → float
+        assert row["leverage"] is None      # garbage → dropped
+        assert row["daily_pnl"] is None
+
+    def test_get_nlv_history_heals_poisoned_rows(self, tmp_db):
+        """Rows written before the write-side guard may hold strings —
+        the read path must coerce them so screens always get float-or-None."""
+        import db
+        db.NLVSnapshot.create(
+            timestamp=datetime.now(timezone.utc),
+            nlv=500000.0, cushion="22.0", leverage="1.8x", daily_pnl="1234.0",
+        )
+        row = db.get_nlv_history(days=1)[0]
+        assert isinstance(row["nlv"], float)
+        assert row["cushion"] == 22.0
+        assert row["leverage"] is None
+        assert row["daily_pnl"] == 1234.0
+
 
 class TestEarningsSurprises:
     def test_upsert_and_query(self, tmp_db):
