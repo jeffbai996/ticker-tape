@@ -7,6 +7,7 @@ app.tcss filter=git-crypt diff=git-crypt
 config.py filter=git-crypt diff=git-crypt
 data.py filter=git-crypt diff=git-crypt
 chat.py filter=git-crypt diff=git-crypt
+chat_tools.py filter=git-crypt diff=git-crypt
 formatters.py filter=git-crypt diff=git-crypt
 i18n.py filter=git-crypt diff=git-crypt
 ibkr_client.py filter=git-crypt diff=git-crypt
