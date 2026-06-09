@@ -1,0 +1,26 @@
+[
+  {
+    "role": "user",
+    "text": "Quick read on the portfolio — anything I should worry about today?",
+    "ts": "2026-01-08T14:32:00+00:00",
+    "model": "flash"
+  },
+  {
+    "role": "assistant",
+    "text": "Net liquidation is $500K with leverage at 1.8x and a 22% cushion — comfortable territory. Daily P&L is +$1,234 (+0.25% of NLV). NVDA is your largest weight at ~31%; no earnings inside the next week, so event risk is quiet. Nothing actionable today.",
+    "ts": "2026-01-08T14:32:08+00:00",
+    "model": "flash"
+  },
+  {
+    "role": "user",
+    "text": "What would a 20% equity drawdown do to my margin?",
+    "ts": "2026-01-08T14:35:00+00:00",
+    "model": "flash"
+  },
+  {
+    "role": "assistant",
+    "text": "A -20% shock on ~$900K gross exposure takes roughly $180K off NLV (about -36%), dropping the cushion from 22% to ~4% and pushing leverage toward 2.2x. That's elevated margin-call territory — the usual levers are trimming the largest position or adding cash before the event, not after.",
+    "ts": "2026-01-08T14:35:11+00:00",
+    "model": "flash"
+  }
+]

@@ -67,7 +67,7 @@ Issues = "https://github.com/jeffbai996/ticker-tape/issues"
 # `screens/` package and assets that the TUI loads at runtime.
 py-modules = [
     "app", "cli", "analyze", "archive", "chat", "chat_tools", "config", "data", "db",
-    "econ_calendar", "formatters", "i18n", "ibkr_client", "journal",
+    "demo_data", "econ_calendar", "formatters", "i18n", "ibkr_client", "journal",
     "json_store", "memory", "pricing",
 ]
 
