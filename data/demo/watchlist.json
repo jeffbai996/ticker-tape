@@ -1,0 +1,40 @@
+{
+  "symbols": [
+    "AAPL",
+    "AMZN",
+    "GLD",
+    "GOOGL",
+    "MSFT",
+    "NVDA",
+    "SPY",
+    "TLT",
+    "TSLA"
+  ],
+  "names": {
+    "AAPL": "Apple Inc.",
+    "AMZN": "Amazon.com, Inc.",
+    "GLD": "SPDR Gold Shares",
+    "GOOGL": "Alphabet Inc.",
+    "MSFT": "Microsoft Corporation",
+    "NVDA": "NVIDIA Corporation",
+    "SPY": "SPDR S&P 500 ETF",
+    "TLT": "iShares 20+ Year Treasury",
+    "TSLA": "Tesla, Inc."
+  },
+  "seeded": true,
+  "groups": {
+    "Mega-cap Tech": [
+      "AAPL",
+      "AMZN",
+      "GOOGL",
+      "MSFT",
+      "NVDA",
+      "TSLA"
+    ],
+    "Ballast": [
+      "GLD",
+      "SPY",
+      "TLT"
+    ]
+  }
+}

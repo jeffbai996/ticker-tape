@@ -16,6 +16,10 @@ econ_calendar.py filter=git-crypt diff=git-crypt
 analyze.py filter=git-crypt diff=git-crypt
 archive.py filter=git-crypt diff=git-crypt
 pricing.py filter=git-crypt diff=git-crypt
+demo_data.py filter=git-crypt diff=git-crypt
+
+# ── Demo seed data (public showcase — explicitly plaintext) ──
+data/demo/** !filter !diff
 
 # ── Docs (reveals features/architecture) ──
 USER_GUIDE.md filter=git-crypt diff=git-crypt

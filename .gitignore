@@ -16,6 +16,8 @@ data/*
 !data/analyses/
 data/analyses/*
 !data/analyses/.gitkeep
+# demo seed data is the public showcase — committed plaintext
+!data/demo/
 .locale
 .compact_mode
 
