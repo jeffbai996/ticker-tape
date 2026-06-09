@@ -14,6 +14,7 @@ memory.py filter=git-crypt diff=git-crypt
 econ_calendar.py filter=git-crypt diff=git-crypt
 analyze.py filter=git-crypt diff=git-crypt
 archive.py filter=git-crypt diff=git-crypt
+pricing.py filter=git-crypt diff=git-crypt
 
 # ── Docs (reveals features/architecture) ──
 USER_GUIDE.md filter=git-crypt diff=git-crypt
@@ -65,6 +66,7 @@ tests/test_status_bar.py filter=git-crypt diff=git-crypt
 tests/test_thesis.py filter=git-crypt diff=git-crypt
 tests/test_analyze.py filter=git-crypt diff=git-crypt
 tests/test_archive.py filter=git-crypt diff=git-crypt
+tests/test_pricing.py filter=git-crypt diff=git-crypt
 
 # ── Superpowers docs (spec/plan reveal architecture + thesis) ──
 docs/superpowers/** filter=git-crypt diff=git-crypt

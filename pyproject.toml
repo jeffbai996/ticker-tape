@@ -68,7 +68,7 @@ Issues = "https://github.com/jeffbai996/ticker-tape/issues"
 py-modules = [
     "app", "cli", "analyze", "archive", "chat", "config", "data", "db",
     "econ_calendar", "formatters", "i18n", "ibkr_client", "journal",
-    "json_store", "memory",
+    "json_store", "memory", "pricing",
 ]
 
 [tool.setuptools.packages.find]
