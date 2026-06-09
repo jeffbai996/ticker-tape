@@ -4,12 +4,12 @@ Distinct from memories (AI context) and history (chat transcript).
 Journal entries are the user's own thinking, importable into chat on demand.
 """
 
-import os
 import re
 
+from config import data_path
 from json_store import JsonStore
 
-JOURNAL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "journal.json")
+JOURNAL_FILE = data_path("journal.json")
 MAX_ENTRIES = 500
 
 _store = JsonStore(JOURNAL_FILE, MAX_ENTRIES)
