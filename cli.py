@@ -125,7 +125,8 @@ def cmd_lookup(sym: str) -> None:
     info = data.fetch_stock_info(sym)
     if info:
         console.print(_title(sym))
-        console.print(format_lookup(info, sym))
+        # Prefer fresh bulk (price, prev) so baselines match the TUI sidebar
+        console.print(format_lookup(info, sym, price_prev=data.bulk_prices([sym]).get(sym)))
     else:
         console.print(f"[#ff3232]No data for {sym}[/]")
 
