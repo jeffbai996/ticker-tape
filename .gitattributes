@@ -70,3 +70,4 @@ tests/test_pricing.py filter=git-crypt diff=git-crypt
 
 # ── Superpowers docs (spec/plan reveal architecture + thesis) ──
 docs/superpowers/** filter=git-crypt diff=git-crypt
+tests/test_lookup.py filter=git-crypt diff=git-crypt
