@@ -155,6 +155,15 @@ class TestParseAccountSummary:
         assert out["cushion"] == 0.42
         assert out["leverage"] == 1.8
 
+    def test_lever_to_float_strips_x_suffix(self):
+        """Shared coercion helper — used by both the risk panel and the NLV
+        snapshot recorder, so '1.8x' never reaches db.record_nlv as a string."""
+        assert Sidebar._lever_to_float("1.8x") == 1.8
+        assert Sidebar._lever_to_float("1,250.5x") == 1250.5
+        assert Sidebar._lever_to_float(1.5) == 1.5
+        assert Sidebar._lever_to_float("garbage") is None
+        assert Sidebar._lever_to_float(None) is None
+
     def test_extended_summary_fields_parsed(self):
         """Margin util, excess liquidity, buying power round-trip into the dict."""
         raw = (
