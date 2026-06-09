@@ -83,6 +83,27 @@ class TestParsePnl:
         # Total = 200000 + (-30000) = 170000
         assert "170,000" in rendered
 
+    def test_build_pnl_recomputes_day_pct_from_raw_when_nlv_present(self):
+        """Day% must come from raw daily_pnl/NLV, never the pre-formatted
+        (rounded) percentage parsed out of the MCP string."""
+        parsed = {
+            "daily_pnl": 1250.0,
+            "net_liquidation": 500000.0,
+            "daily_pnl_pct": 9.99,  # deliberately wrong — must be ignored
+        }
+        sb = Sidebar.__new__(Sidebar)
+        rendered = sb._build_pnl(parsed)
+        assert "+0.25%" in rendered
+        assert "+9.99%" not in rendered
+
+    def test_build_pnl_falls_back_to_parsed_pct_without_nlv(self):
+        """When NLV is absent from the dict, the parsed parenthetical is the
+        only source — keep rendering it."""
+        parsed = {"daily_pnl": 1250.0, "daily_pnl_pct": 0.31}
+        sb = Sidebar.__new__(Sidebar)
+        rendered = sb._build_pnl(parsed)
+        assert "+0.31%" in rendered
+
     def test_build_pnl_skips_total_when_components_missing(self):
         """No Total row if either unrealized or realized is absent."""
         raw = "**Daily P&L**: $100.00 USD\n"
