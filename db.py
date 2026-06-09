@@ -86,6 +86,17 @@ def init_db() -> None:
     db.create_tables([NLVSnapshot, EarningsSurprise])
     log.info("Database initialized at %s", DB_FILE)
 
+    # Demo first-run: seed fake NLV history so the timeline screen has a
+    # chart immediately. Reads config at call time (tests flip DEMO_MODE
+    # via setattr); seed_demo_db() itself no-ops when history exists.
+    import config
+    if config.DEMO_MODE:
+        try:
+            import demo_data
+            demo_data.seed_demo_db()
+        except Exception as e:
+            log.warning("Demo NLV seed failed: %s", e)
+
 
 # ── NLV snapshots ─────────────────────────────────────────
 
