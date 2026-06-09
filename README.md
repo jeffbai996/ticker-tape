@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v2.6.1*
+*v2.7.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -28,6 +28,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 - **Stale-data banner** — When the last successful quote fetch is more than 5 minutes old (connection issue, throttle, IBKR session drop, etc.), a red `⚠ STALE — last good fetch Xm ago` banner appears at the top of the watchlist. Frozen prices stay visible underneath but it's unmistakable that they shouldn't be acted on.
 - **Alerts** — Smart alerts on price levels, RSI thresholds, SMA crossovers, volume spikes, and margin cushion. Fire-once trigger with auto-removal; technical alerts on a 60s eval cycle.
 - **NLV History** — SQLite-backed NLV snapshots every 60s via peewee ORM (WAL mode). `timeline` shows a 90-day ASCII chart with drawdown and leverage trend.
+- **P/L conventions** — All change/P&L/drawdown math goes through a single `pricing` module. Daily change % baselines on the previous regular-session close (bulk history); extended-hours % baselines on the last regular-session close; daily P&L % is recomputed from raw P&L over NLV. Zero/negative/missing baselines yield no figure — never a fake 0%.
 
 ### Trading workflows
 
@@ -341,6 +342,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v2.7.0** (2026-06-09) — **P/L correctness.** New `pricing` module is the single source of truth for change/P&L/drawdown math; quotes, briefing, sidebar, lookup, status bar, market pulse, sectors, commodities, valuation, timeline, and IBKR P&L all route through it. Daily change % baselines on previous regular-session close, extended-hours % on last regular-session close, daily P&L % recomputed from raw P&L over NLV, NLV drawdown clamped at 0. Zero/negative/missing baselines now skip or mark the row stale instead of rendering a fake 0% or sign-flipped figure.
 
 **v2.6.1** (2026-04-19) — Archive navigation. `memos` lists archived slugs (count + newest date); `memos <slug>` shows each memo's date, conviction level, and key claim with an index column. `memo <N>` reopens memo #N from the last listing; `memo latest [slug]` jumps to the newest. Banner shows date, conviction, angle, model; body rendered through _md_to_rich so it flows like a fresh analyze. Read-only — no AI calls, no archive modification.
 
