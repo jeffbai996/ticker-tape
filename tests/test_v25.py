@@ -226,6 +226,20 @@ class TestTimelineFormatter:
         assert "510,000" in result  # peak
         assert "days" in result
 
+    def test_drawdown_clamped_when_nlv_above_stale_peak(self):
+        """A stale peak below current NLV must show 0.0% drawdown, not a gain."""
+        from screens.timeline import format_timeline
+        now = datetime.now(timezone.utc)
+        snapshots = [
+            {"timestamp": now - timedelta(days=10 - i),
+             "nlv": 500000 + i * 1000,
+             "cushion": 18.0, "leverage": 1.8, "daily_pnl": 1000}
+            for i in range(10)
+        ]
+        result = format_timeline(snapshots, 505000)  # peak below latest 509,000
+        assert "+0.0%" in result
+        assert "+0.8%" not in result  # the unclamped (509000-505000)/505000
+
 
 class TestAlertsFormatter:
     def test_empty_shows_all_types(self):

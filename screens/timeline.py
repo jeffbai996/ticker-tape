@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+import pricing
 from i18n import t
 
 
@@ -44,9 +45,7 @@ def format_timeline(snapshots: list[dict], peak: float | None) -> str:
     cur_lever = current.get("leverage")
 
     # Drawdown from peak
-    drawdown = None
-    if peak and peak > 0:
-        drawdown = ((cur_nlv - peak) / peak) * 100
+    drawdown = pricing.drawdown(cur_nlv, peak)
 
     # ── Build chart ──────────────────────────────
     width = 60
@@ -128,9 +127,10 @@ def format_timeline(snapshots: list[dict], peak: float | None) -> str:
     if extra:
         lines.append("  " + "  │  ".join(extra))
 
-    # Period stats
-    change_pct = ((daily_nlv[-1] - daily_nlv[0]) / daily_nlv[0]) * 100
-    ch_color = "green" if change_pct >= 0 else "#ff3232"
-    lines.append(f"\n  [dim]{len(days)} days[/]  [{ch_color}]{change_pct:+.1f}%[/] [dim]period return[/]")
+    # Period stats — same change math as daily: first NLV is the baseline
+    period_ch = pricing.daily_change(daily_nlv[-1], daily_nlv[0])
+    if period_ch:
+        ch_color = "green" if period_ch.pct >= 0 else "#ff3232"
+        lines.append(f"\n  [dim]{len(days)} days[/]  [{ch_color}]{period_ch.pct:+.1f}%[/] [dim]period return[/]")
 
     return "\n".join(lines)
