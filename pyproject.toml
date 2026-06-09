@@ -80,3 +80,4 @@ include = ["screens*"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
+markers = ["allow_network: permit real network access in this test"]
