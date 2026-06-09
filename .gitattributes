@@ -73,3 +73,4 @@ tests/test_chat_tools.py filter=git-crypt diff=git-crypt
 # ── Superpowers docs (spec/plan reveal architecture + thesis) ──
 docs/superpowers/** filter=git-crypt diff=git-crypt
 tests/test_lookup.py filter=git-crypt diff=git-crypt
+tests/test_demo.py filter=git-crypt diff=git-crypt

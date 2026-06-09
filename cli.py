@@ -40,6 +40,14 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# --demo must be handled BEFORE config (and anything importing it) loads:
+# config.DEMO_MODE and the data-file path constants are bound at import time,
+# so the env var has to exist first. Strip the flag so the command dispatcher
+# doesn't mistake it for a command.
+if "--demo" in sys.argv:
+    sys.argv.remove("--demo")
+    os.environ["TICKERTAPE_DEMO"] = "1"
+
 from dotenv import load_dotenv
 load_dotenv()
 
