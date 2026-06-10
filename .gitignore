@@ -10,6 +10,8 @@ build/
 dist/
 .env
 *.db
+*.db-wal
+*.db-shm
 .DS_Store
 .pytest_cache/
 data/*
@@ -23,3 +25,8 @@ data/analyses/*
 
 # secrets-bearing backups (never commit)
 .env.bak*
+
+# derived demo artifacts — regenerated at runtime (demo ticker.db is *.db)
+data/demo/analyses/_index.json
+data/demo/exports/
+data/demo/clipboard.txt
