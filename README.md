@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v2.7.0*
+*v3.0.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -203,12 +203,13 @@ $2.1B in March, removing the funding overhang.
 
 Mentioning a watchlist ticker in chat automatically fetches its recent headlines and injects them into the AI's context. No manual `/news` command needed — just say "what do you think about AAPL" and the model sees the latest headlines alongside its market data.
 
-### AI Tool Use
+### Agent Tools
 
-The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "show my positions" and it calls `ibkr_get_positions()` to pull live portfolio data.
+The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "set an alert when NVDA crosses 200" and it calls `set_alert` — the alert lands in the same store the `alert` command uses. "What did my last AAPL memo say" searches the analyze archive. 19 tools across all seven models.
 
-| Tool | What It Fetches |
-|------|----------------|
+| Tool | What It Does |
+|------|--------------|
+| `get_quotes` | Fresh real-time quotes for any symbols |
 | `get_technicals` | RSI, SMA, MACD, Bollinger, ATR, volume ratio |
 | `get_news` | Recent headlines with age |
 | `get_fundamentals` | P/E, margins, growth, market cap |
@@ -221,8 +222,15 @@ The AI can call ticker-tape functions directly when you ask about specific data 
 | `ibkr_what_if` | Simulate trade: margin impact, cushion change |
 | `get_earnings_surprises` | Historical EPS beat/miss across watchlist |
 | `get_briefing` | Morning briefing: portfolio, macro, movers, earnings |
+| `search_memos` | Search the analyze-memo archive (claims + bodies) |
+| `set_alert` / `delete_alert` / `list_alerts` | Manage price/RSI/SMA/volume/cushion alerts |
+| `memory_add` / `memory_delete` | Save/delete persistent memories |
 
-Tools are defined once in a provider-agnostic registry and translated to each provider's native format (Anthropic tool_use, Gemini function_declarations, OpenAI function tools). Execution is local — the model requests a tool, ticker-tape runs it in Python, feeds the result back, and the model continues with analysis. Works across all seven models.
+Tools are defined once in a provider-agnostic registry and translated to each provider's native format (Anthropic tool_use, Gemini function_declarations, OpenAI function tools). Execution is local — the model requests a tool, ticker-tape runs it in Python, feeds the result back, and the model continues with analysis. Tool rounds are capped per turn, so a confused model can't loop forever.
+
+Write tools (`set_alert`, `memory_add`, deletes) validate and normalize arguments before persisting — junk operators or unknown alert types are refused with an error the model can correct, never silently stored as dead alerts.
+
+**Broker access is strictly read-only.** The tool layer has no order-placement capability at all — IBKR tool names are checked against a hard whitelist (positions, account summary, briefing, stress test, what-if) before any network call. No model output can place, modify, or cancel an order through this code path.
 
 ### Clipboard
 
@@ -269,6 +277,19 @@ memo latest TSLA                # reopen the newest memo for a slug
 Slug resolution: uppercase → symbol (`memos tsla` → `TSLA`), lowercase → thesis, `_freeform/<hash>` → freeform. Unknown slug shows a dim not-found message; out-of-range `memo N` reports the last listing size so you can retry.
 
 The reopen view starts with a banner (target · date · conviction-colored badge · key claim · angle · model · prior-memo count), then streams the body through the same markdown renderer used for a live analyze. Error memos surface with a `UNKNOWN` dim badge so failed runs remain visible in the timeline.
+
+## Demo Mode
+
+```
+ticker-tape --demo          # or: TICKERTAPE_DEMO=1 ticker-tape
+ticker-tape-cli --demo account
+```
+
+A full fake terminal for screenshots, public demos, and trying the app without keys or accounts. Deterministic fake market (generic mega-caps + broad ETFs, prices drift per minute-bucket so the UI animates but the same minute always renders the same tape) and a fake $500K IBKR account (5 generic positions, 1.8x leverage, seeded 90-day NLV history, showcase alerts, a seeded memo and chat history).
+
+- **Zero network** — every fetcher and the IBKR client are swapped at the seam; nothing leaves the process.
+- **Zero PII** — all data lives under `data/demo/`, the chat system prompt is forced to the generic default (no personal context, no real symbols), and the account id is the fake `U1234567`.
+- All 51 screens verified to render under demo mode.
 
 ## Status Bar
 
@@ -326,7 +347,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
 - `pyyaml` — Analyze memo front-matter serialization
-- `pytest` — 706 tests covering data layer, formatters, screens, chat, tool registry, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views
+- `pytest` — 834 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views
 
 ## Demo
 
@@ -342,6 +363,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.0.0** (2026-06-09) — **Agent tools + demo mode.** Tool layer extracted to `chat_tools.py` and extended to 19 tools across all seven models / three providers. New tools: `get_quotes` (fresh quotes on demand), `search_memos` (analyze-archive search), `set_alert`/`delete_alert`/`list_alerts`, `memory_add`/`memory_delete` — write tools validate and normalize args before persisting (GPT's "above"/"below" operators normalized, junk alert types refused instead of stored dead). Hard read-only IBKR whitelist: no tool name outside the read set is ever forwarded to the broker gateway — refusal happens before any network call; the layer has no order-placement capability. OpenAI streaming tool-call fixes (args accumulated by item_id, conversation preserved across tool rounds); Gemini translator type fixes. New demo mode (`ticker-tape --demo` / `TICKERTAPE_DEMO=1`): deterministic fake market + fake $500K account on generic tickers, all data under `data/demo/`, zero network, system prompt sanitized of all real context, seeded NLV history/alerts/memo/chat — 51 screens verified.
 
 **v2.7.0** (2026-06-09) — **P/L correctness.** New `pricing` module is the single source of truth for change/P&L/drawdown math; quotes, briefing, sidebar, lookup, status bar, market pulse, sectors, commodities, valuation, timeline, and IBKR P&L all route through it. Daily change % baselines on previous regular-session close, extended-hours % on last regular-session close, daily P&L % recomputed from raw P&L over NLV, NLV drawdown clamped at 0. Zero/negative/missing baselines now skip or mark the row stale instead of rendering a fake 0% or sign-flipped figure.
 
