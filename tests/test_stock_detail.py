@@ -13,8 +13,9 @@ class TestFormatDividends:
         assert "does not pay" in result
 
     def test_basic_dividend(self):
+        # yfinance >= 0.2.54 returns dividendYield already in percent
         info = {
-            "dividendYield": 0.025,
+            "dividendYield": 2.5,
             "dividendRate": 1.00,
             "payoutRatio": 0.30,
         }
@@ -24,9 +25,34 @@ class TestFormatDividends:
         assert "30.0%" in result
 
     def test_high_payout_ratio_red(self):
-        info = {"dividendYield": 0.05, "payoutRatio": 0.9}
+        info = {"dividendYield": 5.0, "payoutRatio": 0.9}
         result = format_dividends(info, "T")
         assert "ff3232" in result  # red for high payout
+
+    def test_yield_not_multiplied_by_100(self):
+        """Regression: real-mode sweep showed AAPL at 'Yield 36.00%'.
+
+        yfinance changed dividendYield from fraction (0.0036) to percent
+        (0.36) — multiplying by 100 renders 36.00%. trailing stays a
+        fraction; fiveYearAvg was always percent.
+        """
+        info = {
+            "dividendYield": 0.36,
+            "dividendRate": 1.08,
+            "trailingAnnualDividendYield": 0.0034,
+            "fiveYearAvgDividendYield": 0.50,
+        }
+        result = format_dividends(info, "AAPL")
+        assert "0.36%" in result
+        assert "36.00%" not in result
+        assert "0.34%" in result   # trailing: fraction * 100
+        assert "0.50%" in result   # 5y avg: already percent
+
+    def test_yield_color_thresholds_in_percent_units(self):
+        # > 3% green, > 1% amber, else dim
+        assert "[green]4.20%" in format_dividends({"dividendYield": 4.2}, "X")
+        assert "[#ffc800]2.00%" in format_dividends({"dividendYield": 2.0}, "X")
+        assert "[dim]0.36%" in format_dividends({"dividendYield": 0.36}, "X")
 
 
 class TestFormatShortInterest:
