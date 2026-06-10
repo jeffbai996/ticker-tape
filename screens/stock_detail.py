@@ -31,10 +31,13 @@ def format_dividends(info: dict | None, symbol: str) -> str:
 
     lines = []
 
-    # Current yield & rate
+    # Current yield & rate. yfinance >= 0.2.54 returns dividendYield
+    # already in percent (0.36 = 0.36%) — scaling by 100 rendered AAPL
+    # as 36.00%. trailingAnnualDividendYield stays a fraction;
+    # fiveYearAvgDividendYield was always percent.
     if dy is not None:
-        color = "green" if dy > 0.03 else "#ffc800" if dy > 0.01 else "dim"
-        lines.append(_row("Yield", f"[{color}]{dy * 100:.2f}%[/]"))
+        color = "green" if dy > 3 else "#ffc800" if dy > 1 else "dim"
+        lines.append(_row("Yield", f"[{color}]{dy:.2f}%[/]"))
     if rate is not None:
         lines.append(_row("Annual Rate", f"${rate:.2f}"))
     if trailing is not None:
