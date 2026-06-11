@@ -66,17 +66,19 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ## AI Chat
 
-Seven models across three providers — switch mid-conversation with `model`.
+Nine models across three providers — switch mid-conversation with `model`.
 
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
-| Gemini Flash | Google | — | 900K | Fast answers, cheapest |
-| Gemini Pro | Google | 2,000 | 900K | Deep analysis |
+| Gemini Flash | Google | 1,024 | 900K | Fast answers, cheapest |
+| Flash 3.5 | Google | 1,024 | 900K | Newer fast Gemini |
+| Gemini Pro | Google | 2,048 | 900K | Deep analysis |
+| Fable 5 | Anthropic | adaptive | 1M | Most capable — top reasoning |
 | Haiku 4.5 | Anthropic | — | 200K | Fast summarization |
-| Sonnet 4.6 | Anthropic | 4,000 | 200K | Balanced |
-| Opus 4.7 | Anthropic | 8,000 | 200K | Strongest reasoning |
-| GPT-5.4 mini | OpenAI | — | 120K | Fast GPT |
-| GPT-5.5 | OpenAI | — | 120K | Full GPT |
+| Sonnet 4.6 | Anthropic | 4,096 | 180K | Balanced |
+| Opus 4.8 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
+| GPT-5.4 mini | OpenAI | low | 120K | Fast GPT |
+| GPT-5.5 | OpenAI | medium | 120K | Full GPT |
 
 ```
 ticker> model
@@ -85,7 +87,9 @@ ticker> model
 Type 'model' to list, 'model <name>' to switch.
 
   ◆ flash        Gemini Flash              gemini-3-flash-preview         ✓
+    flash+       Flash 3.5                 gemini-3.5-flash               ✓
     pro          Gemini Pro                gemini-3.1-pro-preview         ✓
+    fable        Fable 5                   claude-fable-5                 ✓
     haiku        Haiku 4.5                 claude-haiku-4-5-20251001      ✓
     sonnet       Sonnet 4.6                claude-sonnet-4-6              ✓
     opus         Opus 4.8                  claude-opus-4-8                ✓
@@ -105,11 +109,11 @@ The AI assistant has a layered context system — it knows who you are, what the
 
 ### Image Input
 
-Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all seven models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual. Hard cap at 2 MB per image (override with `TICKERTAPE_MAX_IMAGE_BYTES`); oversize images get rejected with a notify, since image tokens add up fast — a 4K screenshot can cost ~16K input tokens *per turn the conversation references it*.
+Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all nine models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual. Hard cap at 2 MB per image (override with `TICKERTAPE_MAX_IMAGE_BYTES`); oversize images get rejected with a notify, since image tokens add up fast — a 4K screenshot can cost ~16K input tokens *per turn the conversation references it*.
 
 ### Memory
 
-Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all seven models share the same knowledge base.
+Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all nine models share the same knowledge base.
 
 **Three ways to save:** `memory add <text>` from the command bar, `remember <text>` while in chat mode (direct, no API call), or just tell the AI conversationally — "remember that AAPL reports Jan 30" — and it saves automatically.
 
@@ -205,7 +209,7 @@ Mentioning a watchlist ticker in chat automatically fetches its recent headlines
 
 ### Agent Tools
 
-The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "set an alert when NVDA crosses 200" and it calls `set_alert` — the alert lands in the same store the `alert` command uses. "What did my last AAPL memo say" searches the analyze archive. 19 tools across all seven models.
+The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "set an alert when NVDA crosses 200" and it calls `set_alert` — the alert lands in the same store the `alert` command uses. "What did my last AAPL memo say" searches the analyze archive. 19 tools across all nine models.
 
 | Tool | What It Does |
 |------|--------------|
@@ -363,6 +367,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.1.0** (2026-06-10) — **Fable 5 + adaptive thinking.** Added Claude **Fable 5** (`claude-fable-5`) as the top model — 1M context, $10/$50 per MTok, the most capable of the lineup (now nine models across three providers). Fable 5 and Opus 4.8 use **adaptive thinking** (`thinking: {type: "adaptive"}`); the Claude call path now routes by a `thinking_mode` flag instead of always sending the legacy `budget_tokens` form, which 400s on adaptive-only models. Fixed **Opus 4.8** along the way — it carried the same latent `budget_tokens` config and would 400 on thinking turns; switched it to adaptive and corrected its context window to 1M. Also surfaced the previously-undocumented **Flash 3.5** (`gemini-3.5-flash`) in the model list.
 
 **v3.0.0** (2026-06-09) — **Agent tools + demo mode.** Tool layer extracted to `chat_tools.py` and extended to 19 tools across all seven models / three providers. New tools: `get_quotes` (fresh quotes on demand), `search_memos` (analyze-archive search), `set_alert`/`delete_alert`/`list_alerts`, `memory_add`/`memory_delete` — write tools validate and normalize args before persisting (GPT's "above"/"below" operators normalized, junk alert types refused instead of stored dead). Hard read-only IBKR whitelist: no tool name outside the read set is ever forwarded to the broker gateway — refusal happens before any network call; the layer has no order-placement capability. OpenAI streaming tool-call fixes (args accumulated by item_id, conversation preserved across tool rounds); Gemini translator type fixes. New demo mode (`ticker-tape --demo` / `TICKERTAPE_DEMO=1`): deterministic fake market + fake $500K account on generic tickers, all data under `data/demo/`, zero network, system prompt sanitized of all real context, seeded NLV history/alerts/memo/chat — 51 screens verified.
 
