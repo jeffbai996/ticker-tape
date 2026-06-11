@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.1.0*
+*v3.1.1*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -66,14 +66,13 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ## AI Chat
 
-Nine models across three providers — switch mid-conversation with `model`.
+Eight models across three providers — switch mid-conversation with `model`.
 
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
 | Gemini Flash | Google | 1,024 | 900K | Fast answers, cheapest |
 | Flash 3.5 | Google | 1,024 | 900K | Newer fast Gemini |
 | Gemini Pro | Google | 2,048 | 900K | Deep analysis |
-| Haiku 4.5 | Anthropic | — | 200K | Fast summarization |
 | Sonnet 4.6 | Anthropic | 4,096 | 180K | Balanced |
 | Opus 4.8 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
 | Fable 5 | Anthropic | adaptive | 1M | Most capable — top reasoning |
@@ -91,7 +90,6 @@ Type 'model' to list, 'model <name>' to switch.
     flash+       Flash 3.5                 gemini-3.5-flash               ✓
     pro          Gemini Pro                gemini-3.1-pro-preview         ✓
   ── CLAUDE ──
-    haiku        Haiku 4.5                 claude-haiku-4-5-20251001      ✓
     sonnet       Sonnet 4.6                claude-sonnet-4-6              ✓
     opus         Opus 4.8                  claude-opus-4-8                ✓
     fable        Fable 5                   claude-fable-5                 ✓
@@ -112,11 +110,11 @@ The AI assistant has a layered context system — it knows who you are, what the
 
 ### Image Input
 
-Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all nine models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual. Hard cap at 2 MB per image (override with `TICKERTAPE_MAX_IMAGE_BYTES`); oversize images get rejected with a notify, since image tokens add up fast — a 4K screenshot can cost ~16K input tokens *per turn the conversation references it*.
+Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all eight models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual. Hard cap at 2 MB per image (override with `TICKERTAPE_MAX_IMAGE_BYTES`); oversize images get rejected with a notify, since image tokens add up fast — a 4K screenshot can cost ~16K input tokens *per turn the conversation references it*.
 
 ### Memory
 
-Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all nine models share the same knowledge base.
+Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all eight models share the same knowledge base.
 
 **Three ways to save:** `memory add <text>` from the command bar, `remember <text>` while in chat mode (direct, no API call), or just tell the AI conversationally — "remember that AAPL reports Jan 30" — and it saves automatically.
 
@@ -145,8 +143,8 @@ Conversation history persists to disk across sessions and model switches. `histo
 ticker> history
 
 ═══ HISTORY (12 turns, page 1/2) ═══
-  Opus $0.03  Sonnet $0.01  Haiku $0.00  5.5 $0.00  5.4m $0.00  Gemini $0.02
-  ~8.2K tokens  ~$0.06
+  Fable $0.04  Opus $0.03  Sonnet $0.01  GPT $0.02  Gemini $0.02
+  ~8.2K tokens  ~$0.12
 
   1  Q: what do you think about AMZN's setup going into earnings?
      sonnet ▸ AMZN looks solid — RSI 52 is neutral, sitting right on the 50d...
@@ -212,7 +210,7 @@ Mentioning a watchlist ticker in chat automatically fetches its recent headlines
 
 ### Agent Tools
 
-The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "set an alert when NVDA crosses 200" and it calls `set_alert` — the alert lands in the same store the `alert` command uses. "What did my last AAPL memo say" searches the analyze archive. 19 tools across all nine models.
+The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "set an alert when NVDA crosses 200" and it calls `set_alert` — the alert lands in the same store the `alert` command uses. "What did my last AAPL memo say" searches the analyze archive. 19 tools across all eight models.
 
 | Tool | What It Does |
 |------|--------------|
@@ -357,6 +355,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.1.1** (2026-06-11) — **Lineup trim + cost-breakdown fix.** Dropped **Haiku 4.5** — too far behind Sonnet 4.6 / Opus 4.8 / Fable 5 to earn a slot (eight models now). Set **Fable 5** to `effort: medium` (adaptive thinking is steered by effort, not a token budget — medium trims spend on the 2x-cost model). Rewrote the `history` cost breakdown: it was a hardcoded list that **silently dropped Fable's cost** and showed `$0.00` for unused models — now it shows only models with spend this session, folds the GPT models into one entry (like Gemini), and lists Anthropic models individually.
 
 **v3.1.0** (2026-06-10) — **Fable 5 + adaptive thinking.** Added Claude **Fable 5** (`claude-fable-5`) as the top model — 1M context, $10/$50 per MTok, the most capable of the lineup (now nine models across three providers). Fable 5 and Opus 4.8 use **adaptive thinking** (`thinking: {type: "adaptive"}`); the Claude call path now routes by a `thinking_mode` flag instead of always sending the legacy `budget_tokens` form, which 400s on adaptive-only models. Fixed **Opus 4.8** along the way — it carried the same latent `budget_tokens` config and would 400 on thinking turns; switched it to adaptive and corrected its context window to 1M. Also surfaced the previously-undocumented **Flash 3.5** (`gemini-3.5-flash`) in the model list.
 
