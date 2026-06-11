@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.0.0*
+*v3.1.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -73,12 +73,12 @@ Nine models across three providers — switch mid-conversation with `model`.
 | Gemini Flash | Google | 1,024 | 900K | Fast answers, cheapest |
 | Flash 3.5 | Google | 1,024 | 900K | Newer fast Gemini |
 | Gemini Pro | Google | 2,048 | 900K | Deep analysis |
-| Fable 5 | Anthropic | adaptive | 1M | Most capable — top reasoning |
 | Haiku 4.5 | Anthropic | — | 200K | Fast summarization |
 | Sonnet 4.6 | Anthropic | 4,096 | 180K | Balanced |
 | Opus 4.8 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
-| GPT-5.4 mini | OpenAI | low | 120K | Fast GPT |
+| Fable 5 | Anthropic | adaptive | 1M | Most capable — top reasoning |
 | GPT-5.5 | OpenAI | medium | 120K | Full GPT |
+| GPT-5.4 mini | OpenAI | low | 120K | Fast GPT |
 
 ```
 ticker> model
@@ -86,15 +86,18 @@ ticker> model
 ═══ MODELS ═══
 Type 'model' to list, 'model <name>' to switch.
 
+  ── GEMINI ──
   ◆ flash        Gemini Flash              gemini-3-flash-preview         ✓
     flash+       Flash 3.5                 gemini-3.5-flash               ✓
     pro          Gemini Pro                gemini-3.1-pro-preview         ✓
-    fable        Fable 5                   claude-fable-5                 ✓
+  ── CLAUDE ──
     haiku        Haiku 4.5                 claude-haiku-4-5-20251001      ✓
     sonnet       Sonnet 4.6                claude-sonnet-4-6              ✓
     opus         Opus 4.8                  claude-opus-4-8                ✓
-    gpt-mini     GPT-5.4 mini              gpt-5.4-mini                   ✓
+    fable        Fable 5                   claude-fable-5                 ✓
+  ── GPT ──
     gpt          GPT-5.5                   gpt-5.5                        ✓
+    gpt-mini     GPT-5.4 mini              gpt-5.4-mini                   ✓
 ```
 
 ### Context System
@@ -281,19 +284,6 @@ memo latest TSLA                # reopen the newest memo for a slug
 Slug resolution: uppercase → symbol (`memos tsla` → `TSLA`), lowercase → thesis, `_freeform/<hash>` → freeform. Unknown slug shows a dim not-found message; out-of-range `memo N` reports the last listing size so you can retry.
 
 The reopen view starts with a banner (target · date · conviction-colored badge · key claim · angle · model · prior-memo count), then streams the body through the same markdown renderer used for a live analyze. Error memos surface with a `UNKNOWN` dim badge so failed runs remain visible in the timeline.
-
-## Demo Mode
-
-```
-ticker-tape --demo          # or: TICKERTAPE_DEMO=1 ticker-tape
-ticker-tape-cli --demo account
-```
-
-A full fake terminal for screenshots, public demos, and trying the app without keys or accounts. Deterministic fake market (generic mega-caps + broad ETFs, prices drift per minute-bucket so the UI animates but the same minute always renders the same tape) and a fake $500K IBKR account (5 generic positions, 1.8x leverage, seeded 90-day NLV history, showcase alerts, a seeded memo and chat history).
-
-- **Zero network** — every fetcher and the IBKR client are swapped at the seam; nothing leaves the process.
-- **Zero PII** — all data lives under `data/demo/`, the chat system prompt is forced to the generic default (no personal context, no real symbols), and the account id is the fake `U1234567`.
-- All 51 screens verified to render under demo mode.
 
 ## Status Bar
 
