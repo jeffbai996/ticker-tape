@@ -33,15 +33,22 @@ def format_sizing(
     summary_raw: str | None,
     symbol: str,
     quantity: int,
+    direction: str | None = None,
 ) -> str:
     """Format pre-trade what-if analysis with concentration context.
 
     Combines IBKR what-if margin data with position concentration analysis.
+    `direction` ("BUY"/"SELL") labels the trade in the header; None omits it
+    (used when the caller renders a single undirected block).
     """
     lines = []
 
     # ── Section 1: Trade Summary ──
-    lines.append(f"  [bold white]{symbol}[/]  [dim]×[/] [white]{quantity:,}[/] {t('sizing.shares')}\n")
+    dir_tag = ""
+    if direction:
+        dc = "green" if direction.upper() == "BUY" else "#ff3232"
+        dir_tag = f"[{dc}]{t('sizing.buy') if direction.upper() == 'BUY' else t('sizing.sell')}[/] "
+    lines.append(f"  {dir_tag}[bold white]{symbol}[/]  [dim]×[/] [white]{quantity:,}[/] {t('sizing.shares')}\n")
 
     # ── Section 2: Margin Impact (from ibkr_what_if) ──
     if whatif_raw:

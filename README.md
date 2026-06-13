@@ -33,7 +33,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 ### Trading workflows
 
 - **Morning Briefing** — `brief` assembles portfolio health, macro context (10 indicators including DXY, 10Y, BTC), watchlist movers, sector snapshot, news headlines per top mover, and upcoming earnings with EPS estimates. `brief ai` adds AI synthesis.
-- **Position Sizing** — `size SYM QTY` runs an IBKR what-if with concentration and cushion analysis.
+- **Position Sizing** — `whatif [buy/sell] SYM QTY` runs an IBKR what-if with concentration and cushion analysis. Omit the direction to see the buy and sell legs side by side.
 - **Earnings Tracker** — `surprises` shows watchlist-wide EPS beat/miss history with persistence to SQLite.
 
 ### Research & memos
