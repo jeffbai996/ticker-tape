@@ -1722,7 +1722,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.31" },
     { name = "rich", specifier = ">=13.7" },
-    { name = "textual", specifier = ">=0.80" },
+    { name = "textual", specifier = ">=8.1" },
     { name = "yfinance", specifier = ">=0.2.50" },
 ]
 provides-extras = ["dev"]

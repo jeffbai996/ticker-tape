@@ -26,7 +26,7 @@ classifiers = [
 
 dependencies = [
     # TUI + display
-    "textual>=0.80",
+    "textual>=8.1",
     "rich>=13.7",
     # Data sources
     "yfinance>=0.2.50",
