@@ -118,6 +118,8 @@ Memories are persistent facts that survive across sessions, model switches, and 
 
 **Three ways to save:** `memory add <text>` from the command bar, `remember <text>` while in chat mode (direct, no API call), or just tell the AI conversationally — "remember that AAPL reports Jan 30" — and it saves automatically.
 
+<p align="center"><img src="assets/demo-chat-memory.png" width="85%" /></p>
+
 **Deleting works the same way** — `memory delete 5` from the command bar, or tell the AI "forget memory 5" in conversation.
 
 **Compaction** — `memory compact` sends all stored memories through Gemini Flash, which distills them into a smaller set of consolidated facts. Useful when you've built up 20+ memories and want to keep the signal without the noise.
