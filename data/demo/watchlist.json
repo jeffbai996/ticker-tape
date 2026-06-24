@@ -1,33 +1,39 @@
 {
   "symbols": [
     "AAPL",
-    "AMD",
     "AMZN",
-    "CRM",
     "GLD",
-    "INTC",
+    "GS",
+    "JPM",
+    "LLY",
     "META",
     "MSFT",
-    "NFLX",
     "NVDA",
     "SPY",
     "TLT",
-    "TSLA"
+    "TSLA",
+    "UNH",
+    "V",
+    "WMT",
+    "XOM"
   ],
   "names": {
     "AAPL": "Apple Inc.",
-    "AMD": "Advanced Micro Devices",
     "AMZN": "Amazon.com, Inc.",
-    "CRM": "Salesforce, Inc.",
     "GLD": "SPDR Gold Shares",
-    "INTC": "Intel Corporation",
+    "GS": "Goldman Sachs Group",
+    "JPM": "JPMorgan Chase & Co.",
+    "LLY": "Eli Lilly and Company",
     "META": "Meta Platforms, Inc.",
     "MSFT": "Microsoft Corporation",
-    "NFLX": "Netflix, Inc.",
     "NVDA": "NVIDIA Corporation",
     "SPY": "SPDR S&P 500 ETF",
     "TLT": "iShares 20+ Year Treasury",
-    "TSLA": "Tesla, Inc."
+    "TSLA": "Tesla, Inc.",
+    "UNH": "UnitedHealth Group",
+    "V": "Visa Inc.",
+    "WMT": "Walmart Inc.",
+    "XOM": "Exxon Mobil Corporation"
   },
   "seeded": true,
   "groups": {
@@ -39,11 +45,18 @@
       "NVDA",
       "TSLA"
     ],
-    "Semis & Software": [
-      "AMD",
-      "CRM",
-      "INTC",
-      "NFLX"
+    "Financials": [
+      "GS",
+      "JPM",
+      "V"
+    ],
+    "Healthcare": [
+      "LLY",
+      "UNH"
+    ],
+    "Consumer & Energy": [
+      "WMT",
+      "XOM"
     ],
     "Ballast": [
       "GLD",
