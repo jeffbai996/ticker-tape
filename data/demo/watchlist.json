@@ -1,10 +1,14 @@
 {
   "symbols": [
     "AAPL",
+    "AMD",
     "AMZN",
+    "CRM",
     "GLD",
-    "GOOGL",
+    "INTC",
+    "META",
     "MSFT",
+    "NFLX",
     "NVDA",
     "SPY",
     "TLT",
@@ -12,10 +16,14 @@
   ],
   "names": {
     "AAPL": "Apple Inc.",
+    "AMD": "Advanced Micro Devices",
     "AMZN": "Amazon.com, Inc.",
+    "CRM": "Salesforce, Inc.",
     "GLD": "SPDR Gold Shares",
-    "GOOGL": "Alphabet Inc.",
+    "INTC": "Intel Corporation",
+    "META": "Meta Platforms, Inc.",
     "MSFT": "Microsoft Corporation",
+    "NFLX": "Netflix, Inc.",
     "NVDA": "NVIDIA Corporation",
     "SPY": "SPDR S&P 500 ETF",
     "TLT": "iShares 20+ Year Treasury",
@@ -26,10 +34,16 @@
     "Mega-cap Tech": [
       "AAPL",
       "AMZN",
-      "GOOGL",
+      "META",
       "MSFT",
       "NVDA",
       "TSLA"
+    ],
+    "Semis & Software": [
+      "AMD",
+      "CRM",
+      "INTC",
+      "NFLX"
     ],
     "Ballast": [
       "GLD",

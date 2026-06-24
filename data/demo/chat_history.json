@@ -7,7 +7,7 @@
   },
   {
     "role": "assistant",
-    "text": "Net liquidation is $500K with leverage at 1.8x and a 22% cushion — comfortable territory. Daily P&L is +$1,234 (+0.25% of NLV). NVDA is your largest weight at ~31%; no earnings inside the next week, so event risk is quiet. Nothing actionable today.",
+    "text": "Net liquidation is $50K with no leverage (1.0x) and a 75% cushion — very comfortable. Daily P&L is +$125 (+0.25% of NLV). Positions are balanced with no single name over ~21%, and there are no earnings inside the next week, so event risk is quiet. Nothing actionable today.",
     "ts": "2026-01-08T14:32:08+00:00",
     "model": "flash"
   },
@@ -19,7 +19,7 @@
   },
   {
     "role": "assistant",
-    "text": "A -20% shock on ~$900K gross exposure takes roughly $180K off NLV (about -36%), dropping the cushion from 22% to ~4% and pushing leverage toward 2.2x. That's elevated margin-call territory — the usual levers are trimming the largest position or adding cash before the event, not after.",
+    "text": "A -20% equity shock on ~$49K gross takes roughly $9.7K off NLV (about -19%), but with no margin the cushion barely moves — it stays around 76% and leverage holds near 1.0x. Margin-call risk is low; an unleveraged book just rides a drawdown out, so there's nothing to pre-trim ahead of it.",
     "ts": "2026-01-08T14:35:11+00:00",
     "model": "flash"
   }
