@@ -196,7 +196,7 @@ month with a 2028 target. The CHIPS Act second tranche disbursed
 $2.1B in March, removing the funding overhang.
 
 ┌───────────────────────────┐
-│ ↑ 3,156t  ↓ 809t  ⏱ 10.4s │
+│ ↑ 3,156t  ↓ 809t  ◷ 10.4s │
 └───────────────────────────┘
 ```
 
