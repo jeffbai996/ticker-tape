@@ -33,7 +33,14 @@ screens/comparison.py filter=git-crypt diff=git-crypt
 screens/earnings.py filter=git-crypt diff=git-crypt
 screens/heatmap.py filter=git-crypt diff=git-crypt
 screens/help.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen.py filter=git-crypt diff=git-crypt
+screens/ibkr_screen/__init__.py filter=git-crypt diff=git-crypt
+screens/ibkr_screen/_shared.py filter=git-crypt diff=git-crypt
+screens/ibkr_screen/positions.py filter=git-crypt diff=git-crypt
+screens/ibkr_screen/account.py filter=git-crypt diff=git-crypt
+screens/ibkr_screen/margin_dashboard.py filter=git-crypt diff=git-crypt
+screens/ibkr_screen/whatif.py filter=git-crypt diff=git-crypt
+screens/ibkr_screen/consolidated.py filter=git-crypt diff=git-crypt
+screens/ibkr_screen/detail.py filter=git-crypt diff=git-crypt
 screens/impact.py filter=git-crypt diff=git-crypt
 screens/insider.py filter=git-crypt diff=git-crypt
 screens/intraday.py filter=git-crypt diff=git-crypt
