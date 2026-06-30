@@ -3,11 +3,11 @@
 All sourced from yfinance .info dict. Light formatting over cached data.
 """
 
-from formatters import fmt_num
+from formatters import fmt_num, dw
 
 
 def _row(label: str, value: str) -> str:
-    pad = max(1, 24 - len(label))
+    pad = max(1, 24 - dw(label))
     return f"  {label}{' ' * pad}{value}"
 
 
