@@ -3,7 +3,7 @@
 All sourced from yfinance .info dict. Light formatting over cached data.
 """
 
-from formatters import fmt_num, dw
+from formatters import fmt_num, dw, NEG, ACC
 
 
 def _row(label: str, value: str) -> str:
@@ -17,7 +17,7 @@ def _row(label: str, value: str) -> str:
 def format_dividends(info: dict | None, symbol: str) -> str:
     """Format dividend information from .info dict."""
     if not info:
-        return f"[#ff3232]No data for {symbol}[/]"
+        return f"[{NEG}]No data for {symbol}[/]"
 
     dy = info.get("dividendYield")
     rate = info.get("dividendRate")
@@ -36,7 +36,7 @@ def format_dividends(info: dict | None, symbol: str) -> str:
     # as 36.00%. trailingAnnualDividendYield stays a fraction;
     # fiveYearAvgDividendYield was always percent.
     if dy is not None:
-        color = "green" if dy > 3 else "#ffc800" if dy > 1 else "dim"
+        color = "green" if dy > 3 else ACC if dy > 1 else "dim"
         lines.append(_row("Yield", f"[{color}]{dy:.2f}%[/]"))
     if rate is not None:
         lines.append(_row("Annual Rate", f"${rate:.2f}"))
@@ -47,7 +47,7 @@ def format_dividends(info: dict | None, symbol: str) -> str:
 
     # Payout ratio
     if payout is not None:
-        color = "green" if payout < 0.6 else "#ffc800" if payout < 0.8 else "#ff3232"
+        color = "green" if payout < 0.6 else ACC if payout < 0.8 else NEG
         lines.append(_row("Payout Ratio", f"[{color}]{payout * 100:.1f}%[/]"))
 
     # Ex-dividend date
@@ -68,7 +68,7 @@ def format_dividends(info: dict | None, symbol: str) -> str:
 def format_short_interest(info: dict | None, symbol: str) -> str:
     """Format short interest data from .info dict."""
     if not info:
-        return f"[#ff3232]No data for {symbol}[/]"
+        return f"[{NEG}]No data for {symbol}[/]"
 
     si_pct = info.get("shortPercentOfFloat")
     si_ratio = info.get("shortRatio")  # days to cover
@@ -85,12 +85,12 @@ def format_short_interest(info: dict | None, symbol: str) -> str:
 
     # Short % of float — the headline number
     if si_pct is not None:
-        color = "#ff3232" if si_pct > 0.10 else "#ffc800" if si_pct > 0.05 else "green"
+        color = NEG if si_pct > 0.10 else ACC if si_pct > 0.05 else "green"
         lines.append(_row("Short % of Float", f"[{color}]{si_pct * 100:.2f}%[/]"))
 
     # Days to cover
     if si_ratio is not None:
-        color = "#ff3232" if si_ratio > 5 else "#ffc800" if si_ratio > 3 else "dim"
+        color = NEG if si_ratio > 5 else ACC if si_ratio > 3 else "dim"
         lines.append(_row("Days to Cover", f"[{color}]{si_ratio:.1f}[/]"))
 
     # Shares short
@@ -101,7 +101,7 @@ def format_short_interest(info: dict | None, symbol: str) -> str:
     if shares_short and shares_prior:
         delta = shares_short - shares_prior
         delta_pct = (delta / shares_prior) * 100 if shares_prior else 0
-        color = "#ff3232" if delta > 0 else "green"
+        color = NEG if delta > 0 else "green"
         lines.append(_row("vs Prior Month",
                           f"[{color}]{delta:+,.0f} ({delta_pct:+.1f}%)[/]"))
 
@@ -129,7 +129,7 @@ def format_short_interest(info: dict | None, symbol: str) -> str:
 def format_ratings(info: dict | None, symbol: str, recommendations: list[dict] | None = None) -> str:
     """Format analyst ratings and price targets from .info dict."""
     if not info:
-        return f"[#ff3232]No data for {symbol}[/]"
+        return f"[{NEG}]No data for {symbol}[/]"
 
     rec = info.get("recommendationKey")
     n_analysts = info.get("numberOfAnalystOpinions")
@@ -148,8 +148,8 @@ def format_ratings(info: dict | None, symbol: str, recommendations: list[dict] |
     if rec:
         color_map = {
             "strong_buy": "green", "buy": "green",
-            "hold": "#ffc800", "underperform": "#ff3232",
-            "sell": "#ff3232", "strong_sell": "#ff3232",
+            "hold": ACC, "underperform": NEG,
+            "sell": NEG, "strong_sell": NEG,
         }
         color = color_map.get(rec, "dim")
         label = rec.upper().replace("_", " ")
@@ -159,7 +159,7 @@ def format_ratings(info: dict | None, symbol: str, recommendations: list[dict] |
     # Price targets
     if target_mean and price:
         upside = ((target_mean - price) / price) * 100
-        color = "green" if upside > 0 else "#ff3232"
+        color = "green" if upside > 0 else NEG
         lines.append(_row("Mean Target",
                           f"${target_mean:.2f} [{color}]({upside:+.1f}%)[/]"))
     if target_median:
@@ -189,7 +189,7 @@ def format_ratings(info: dict | None, symbol: str, recommendations: list[dict] |
             if action in ("up", "upgrade", "init"):
                 color = "green"
             elif action in ("down", "downgrade"):
-                color = "#ff3232"
+                color = NEG
             else:
                 color = "dim"
 

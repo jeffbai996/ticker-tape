@@ -1,6 +1,7 @@
 """Correlation matrix — pure formatting function."""
 
 from i18n import t
+from formatters import NEG, ACC
 
 MAX_SYMBOLS = 12
 
@@ -51,7 +52,7 @@ def format_correlation(data: dict | None) -> str:
             elif val >= 0.8:
                 cell = f"[bold green]{cell}[/]"      # green — strongly correlated
             elif val >= 0.6:
-                cell = f"[#ffc800]{cell}[/]"         # amber — hidden-beta zone
+                cell = f"[{ACC}]{cell}[/]"         # amber — hidden-beta zone
             elif val >= 0.4:
                 cell = f"[#c89614]{cell}[/]"         # dim amber — moderate
             elif val >= 0.2:
@@ -59,7 +60,7 @@ def format_correlation(data: dict | None) -> str:
             elif val >= 0.0:
                 cell = f"[dim]{cell}[/]"             # dim — near-zero
             else:
-                cell = f"[bold #ff3232]{cell}[/]"    # red — inverse
+                cell = f"[bold {NEG}]{cell}[/]"    # red — inverse
             row += cell
         lines.append(row)
 
@@ -79,10 +80,10 @@ def format_correlation(data: dict | None) -> str:
     lines.append(
         "[dim]Legend: [bold #00ff64]>0.9[/] lockstep  "
         "[bold green]0.8-0.9[/] strong  "
-        "[#ffc800]0.6-0.8[/] hidden-beta  "
+        f"[{ACC}]0.6-0.8[/] hidden-beta  "
         "[#c89614]0.4-0.6[/] moderate  "
         "[white]0.2-0.4[/] weak  "
-        "[bold #ff3232]<0[/] inverse[/]"
+        f"[bold {NEG}]<0[/] inverse[/]"
     )
 
     return "\n".join(lines)

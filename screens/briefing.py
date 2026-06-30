@@ -1,7 +1,7 @@
 """Morning briefing screen — portfolio health, movers, earnings, macro context, news, sectors."""
 
 import pricing
-from formatters import pad
+from formatters import pad, NEG, ACC, INF
 from i18n import t
 
 
@@ -27,7 +27,7 @@ def format_briefing(data: dict) -> str:
         port.get(k) is not None for k in ("nlv", "cushion", "leverage", "daily_pnl")
     )
     if has_port_data:
-        lines.append(f"  [bold #00c8ff]{t('briefing.portfolio')}[/]")
+        lines.append(f"  [bold {INF}]{t('briefing.portfolio')}[/]")
 
         # Row 1: NLV and Daily P&L
         nlv = port.get("nlv")
@@ -36,7 +36,7 @@ def format_briefing(data: dict) -> str:
         if nlv is not None:
             row1_parts.append(f"[dim]{t('briefing.nlv')}[/]       [bold white]${nlv:,.0f}[/]")
         if pnl is not None:
-            pc = "green" if pnl >= 0 else "#ff3232"
+            pc = "green" if pnl >= 0 else NEG
             pnl_str = f"[{pc}]{pnl:+,.0f}[/]"
             # Show % return if NLV available
             pnl_pct = pricing.pnl_pct(pnl, nlv)
@@ -52,13 +52,13 @@ def format_briefing(data: dict) -> str:
         dd = data.get("nlv_drawdown")
         row2_parts = []
         if cushion is not None:
-            cc = "#ff3232" if cushion < 10 else "#ffc800" if cushion < 15 else "green"
+            cc = NEG if cushion < 10 else ACC if cushion < 15 else "green"
             row2_parts.append(f"[dim]{t('briefing.cushion')}[/]   [{cc}]{cushion:.1f}%[/]")
         if lever is not None:
-            lc = "#ff3232" if lever > 3 else "#ffc800" if lever > 2 else "green"
+            lc = NEG if lever > 3 else ACC if lever > 2 else "green"
             row2_parts.append(f"[dim]{t('briefing.leverage')}[/]  [{lc}]{lever:.1f}x[/]")
         if dd is not None and dd < 0:
-            dc = "#ff3232" if dd < -5 else "#ffc800"
+            dc = NEG if dd < -5 else ACC
             row2_parts.append(f"[dim]{t('briefing.drawdown')}[/]  [{dc}]{dd:.1f}%[/]")
         if row2_parts:
             lines.append("    " + "     ".join(row2_parts))
@@ -70,7 +70,7 @@ def format_briefing(data: dict) -> str:
     # ── Macro Context ── (two-column layout, expanded)
     macro = data.get("macro")
     if macro:
-        lines.append(f"  [bold #00c8ff]{t('briefing.macro')}[/]")
+        lines.append(f"  [bold {INF}]{t('briefing.macro')}[/]")
 
         # Build macro items as (label, formatted_value) pairs
         items = []
@@ -90,23 +90,23 @@ def format_briefing(data: dict) -> str:
             if val is None:
                 continue
             if fmt_type == "pct":
-                mc = "green" if val >= 0 else "#ff3232"
+                mc = "green" if val >= 0 else NEG
                 items.append((label, f"[{mc}]{val:+.1f}%[/]"))
             elif fmt_type == "vix":
-                vc = "#ff3232" if val > 25 else "#ffc800" if val > 18 else "green"
+                vc = NEG if val > 25 else ACC if val > 18 else "green"
                 items.append((label, f"[{vc}]{val:.1f}[/]"))
             elif fmt_type == "dxy":
                 pct = macro.get("dxy_pct")
                 pct_str = ""
                 if pct is not None:
-                    dc = "green" if pct >= 0 else "#ff3232"
+                    dc = "green" if pct >= 0 else NEG
                     pct_str = f" [{dc}]{pct:+.1f}%[/]"
                 items.append((label, f"[white]{val:.1f}[/]{pct_str}"))
             elif fmt_type == "yield":
                 pct = macro.get("tnx_pct")
                 pct_str = ""
                 if pct is not None:
-                    yc = "#ff3232" if pct > 0 else "green"
+                    yc = NEG if pct > 0 else "green"
                     pct_str = f" [{yc}]{pct:+.1f}%[/]"
                 items.append((label, f"[white]{val:.2f}%[/]{pct_str}"))
             elif fmt_type == "commodity":
@@ -115,14 +115,14 @@ def format_briefing(data: dict) -> str:
                 pct = macro.get(pct_key)
                 pct_str = ""
                 if pct is not None:
-                    cc = "green" if pct >= 0 else "#ff3232"
+                    cc = "green" if pct >= 0 else NEG
                     pct_str = f" [{cc}]{pct:+.1f}%[/]"
                 items.append((label, f"[white]${val:,.0f}[/]{pct_str}"))
             elif fmt_type == "btc":
                 pct = macro.get("btc_pct")
                 pct_str = ""
                 if pct is not None:
-                    bc = "green" if pct >= 0 else "#ff3232"
+                    bc = "green" if pct >= 0 else NEG
                     pct_str = f" [{bc}]{pct:+.1f}%[/]"
                 items.append((label, f"[white]${val:,.0f}[/]{pct_str}"))
 
@@ -143,7 +143,7 @@ def format_briefing(data: dict) -> str:
     gainers = movers.get("gainers", [])
     losers = movers.get("losers", [])
     if gainers or losers:
-        lines.append(f"  [bold #00c8ff]{t('briefing.movers')}[/]")
+        lines.append(f"  [bold {INF}]{t('briefing.movers')}[/]")
         # Header — pad() for CJK-aware column width
         lines.append(
             f"    [dim]{pad(t('briefing.gainers'), 30)}{pad(t('briefing.losers'), 30)}[/]"
@@ -165,10 +165,10 @@ def format_briefing(data: dict) -> str:
                 lo = losers[i]
                 chg = lo["price"] * lo["pct"] / (100 + lo["pct"]) if lo["pct"] != -100 else 0
                 right = (
-                    f"[#ff3232]▼ {lo['symbol']:<6}[/]"
-                    f"[#ff3232]{lo['pct']:+5.1f}%[/]  "
+                    f"[{NEG}]▼ {lo['symbol']:<6}[/]"
+                    f"[{NEG}]{lo['pct']:+5.1f}%[/]  "
                     f"[dim]${lo['price']:>8,.2f}[/] "
-                    f"[#ff3232]{chg:>+7.2f}[/]"
+                    f"[{NEG}]{chg:>+7.2f}[/]"
                 )
             if left and right:
                 lines.append(f"    {left}     {right}")
@@ -181,11 +181,11 @@ def format_briefing(data: dict) -> str:
     # ── Sector Snapshot ──
     sectors = data.get("sectors", [])
     if sectors:
-        lines.append(f"  [bold #00c8ff]{t('briefing.sectors')}[/]")
+        lines.append(f"  [bold {INF}]{t('briefing.sectors')}[/]")
         # Show in two columns, sorted best to worst (already sorted)
         sector_items = []
         for s in sectors:
-            sc = "green" if s["pct"] >= 0 else "#ff3232"
+            sc = "green" if s["pct"] >= 0 else NEG
             sector_items.append(
                 f"[dim]{s['name']:<18}[/] [{sc}]{s['pct']:+5.1f}%[/]"
             )
@@ -201,7 +201,7 @@ def format_briefing(data: dict) -> str:
     # ── News Headlines ──
     news = data.get("news", [])
     if news:
-        lines.append(f"  [bold #00c8ff]{t('briefing.news')}[/]")
+        lines.append(f"  [bold {INF}]{t('briefing.news')}[/]")
         for item in news:
             sym = item["symbol"]
             headlines = item.get("headlines", [])
@@ -229,13 +229,13 @@ def format_briefing(data: dict) -> str:
     # ── Earnings This Week ──
     earnings = data.get("earnings_week", [])
     if earnings:
-        lines.append(f"  [bold #00c8ff]{t('briefing.earnings')}[/]")
+        lines.append(f"  [bold {INF}]{t('briefing.earnings')}[/]")
         for e in earnings[:8]:
             days = e.get("days_until")
             if days is not None and days <= 1:
-                urgency = "[bold #ff3232]"
+                urgency = f"[bold {NEG}]"
             elif days is not None and days <= 3:
-                urgency = "[#ffc800]"
+                urgency = f"[{ACC}]"
             else:
                 urgency = "[dim]"
             # Build detail string with EPS estimate and timing

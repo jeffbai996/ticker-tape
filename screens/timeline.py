@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pricing
 from i18n import t
+from formatters import NEG, ACC
 
 
 def format_timeline(snapshots: list[dict], peak: float | None) -> str:
@@ -64,7 +65,7 @@ def format_timeline(snapshots: list[dict], peak: float | None) -> str:
 
     blocks = " ▁▂▃▄▅▆▇█"
     normalized = [(p - lo) / spread for p in sampled]
-    color = "green" if sampled[-1] >= sampled[0] else "#ff3232"
+    color = "green" if sampled[-1] >= sampled[0] else NEG
 
     chart_lines = []
     for r in range(rows):
@@ -112,17 +113,17 @@ def format_timeline(snapshots: list[dict], peak: float | None) -> str:
     if peak:
         stats.append(f"[bold white]{t('timeline.peak')}[/] ${peak:,.0f}")
     if drawdown is not None:
-        dd_color = "#ff3232" if drawdown < -5 else "#ffc800" if drawdown < 0 else "green"
+        dd_color = NEG if drawdown < -5 else ACC if drawdown < 0 else "green"
         stats.append(f"[bold white]{t('timeline.drawdown')}[/] [{dd_color}]{drawdown:+.1f}%[/]")
     lines.append("  " + "  │  ".join(stats))
 
     # Leverage and cushion trends (last value)
     extra = []
     if cur_cushion is not None:
-        c_color = "#ff3232" if cur_cushion < 10 else "#ffc800" if cur_cushion < 15 else "green"
+        c_color = NEG if cur_cushion < 10 else ACC if cur_cushion < 15 else "green"
         extra.append(f"[bold white]{t('sidebar.cushion')}[/] [{c_color}]{cur_cushion:.1f}%[/]")
     if cur_lever is not None:
-        l_color = "#ff3232" if cur_lever > 3 else "#ffc800" if cur_lever > 2 else "green"
+        l_color = NEG if cur_lever > 3 else ACC if cur_lever > 2 else "green"
         extra.append(f"[bold white]{t('sidebar.lever')}[/] [{l_color}]{cur_lever:.1f}x[/]")
     if extra:
         lines.append("  " + "  │  ".join(extra))
@@ -130,7 +131,7 @@ def format_timeline(snapshots: list[dict], peak: float | None) -> str:
     # Period stats — same change math as daily: first NLV is the baseline
     period_ch = pricing.daily_change(daily_nlv[-1], daily_nlv[0])
     if period_ch:
-        ch_color = "green" if period_ch.pct >= 0 else "#ff3232"
+        ch_color = "green" if period_ch.pct >= 0 else NEG
         lines.append(f"\n  [dim]{len(days)} days[/]  [{ch_color}]{period_ch.pct:+.1f}%[/] [dim]period return[/]")
 
     return "\n".join(lines)

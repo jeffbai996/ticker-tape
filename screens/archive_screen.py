@@ -3,10 +3,11 @@
 from rich.markup import escape
 
 from archive import format_conviction_color
+from formatters import ACC
 from i18n import t
 
 
-_HEADER_COLOR = "#ffc800"    # amber — matches other ═══ banners
+_HEADER_COLOR = ACC    # amber — matches other ═══ banners
 
 
 def _newest_date(entries: list[dict]) -> str:

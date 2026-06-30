@@ -3,6 +3,7 @@
 import re
 
 from i18n import t
+from formatters import NEG, ACC, INF
 
 
 def _parse_kv(raw: str) -> dict[str, str]:
@@ -46,13 +47,13 @@ def format_sizing(
     # ── Section 1: Trade Summary ──
     dir_tag = ""
     if direction:
-        dc = "green" if direction.upper() == "BUY" else "#ff3232"
+        dc = "green" if direction.upper() == "BUY" else NEG
         dir_tag = f"[{dc}]{t('sizing.buy') if direction.upper() == 'BUY' else t('sizing.sell')}[/] "
     lines.append(f"  {dir_tag}[bold white]{symbol}[/]  [dim]×[/] [white]{quantity:,}[/] {t('sizing.shares')}\n")
 
     # ── Section 2: Margin Impact (from ibkr_what_if) ──
     if whatif_raw:
-        lines.append(f"  [bold #00c8ff]{t('sizing.margin_impact')}[/]")
+        lines.append(f"  [bold {INF}]{t('sizing.margin_impact')}[/]")
         kv = _parse_kv(whatif_raw)
         for key_pattern, label in [
             ("init", t("sizing.init_margin")),
@@ -72,7 +73,7 @@ def format_sizing(
 
     # ── Section 3: Concentration (from positions + summary) ──
     if positions_raw and summary_raw:
-        lines.append(f"  [bold #00c8ff]{t('sizing.concentration')}[/]")
+        lines.append(f"  [bold {INF}]{t('sizing.concentration')}[/]")
         summary_kv = _parse_kv(summary_raw)
 
         # Extract NLV
@@ -118,12 +119,12 @@ def format_sizing(
                 after = _extract_float(v)
 
         if before is not None or after is not None:
-            lines.append(f"  [bold #00c8ff]{t('sizing.cushion_impact')}[/]")
+            lines.append(f"  [bold {INF}]{t('sizing.cushion_impact')}[/]")
             if before is not None:
-                bc = "#ff3232" if before < 10 else "#ffc800" if before < 15 else "green"
+                bc = NEG if before < 10 else ACC if before < 15 else "green"
                 lines.append(f"    [dim]{t('sizing.before'):<16}[/] [{bc}]{before:.1f}%[/]")
             if after is not None:
-                ac = "#ff3232" if after < 10 else "#ffc800" if after < 15 else "green"
+                ac = NEG if after < 10 else ACC if after < 15 else "green"
                 lines.append(f"    [dim]{t('sizing.after'):<16}[/] [{ac}]{after:.1f}%[/]")
 
     return "\n".join(lines)

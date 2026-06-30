@@ -2,7 +2,7 @@
 
 import statistics
 
-from formatters import fmt_num
+from formatters import fmt_num, ACC, NEG
 from i18n import t
 
 
@@ -41,7 +41,7 @@ def _fmt_leg(
         if iv_val is not None:
             iv_str = f"{iv_val * 100:5.1f}%"
             if med_iv > 0 and iv_val > med_iv * 1.5:
-                iv_str = f"[#ffc800]{iv_str}[/]"
+                iv_str = f"[{ACC}]{iv_str}[/]"
         else:
             iv_str = "    —"
 
@@ -50,7 +50,7 @@ def _fmt_leg(
         # Tags
         moneyness = r.get("moneyness", 0)
         if abs(moneyness) < 2:
-            row += f"  [bold #ffc800]{t('options.atm')}[/]"
+            row += f"  [bold {ACC}]{t('options.atm')}[/]"
         elif r.get("itm"):
             row += f"  [dim]{t('options.itm')}[/]"
         elif is_puts:
@@ -62,7 +62,7 @@ def _fmt_leg(
 def format_options(data: dict | None, symbol: str) -> str:
     """Format options chain data for Rich rendering."""
     if data is None:
-        return f"[#ff3232]{t('msg.no_options').format(sym=symbol)}[/]"
+        return f"[{NEG}]{t('msg.no_options').format(sym=symbol)}[/]"
 
     lines: list[str] = []
 

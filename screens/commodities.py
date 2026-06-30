@@ -1,6 +1,6 @@
 """Commodity futures/spot prices — pure formatting function."""
 
-from formatters import POS, NEG
+from formatters import POS, NEG, ACC, INF
 
 
 def _fmt_price(price: float) -> str:
@@ -25,7 +25,7 @@ def format_commodities(data: dict) -> str:
 
     lines = []
     for group_name, items in data.items():
-        lines.append(f"\n[bold #00c8ff]{group_name}[/]")
+        lines.append(f"\n[bold {INF}]{group_name}[/]")
         lines.append(f"[dim]{'─' * 58}[/]")
         for item in items:
             sym   = item["symbol"]
@@ -33,7 +33,7 @@ def format_commodities(data: dict) -> str:
             unit  = item["unit"]
             if item.get("stale"):
                 lines.append(
-                    f"[bold #ffc800]{sym:<8}[/]"
+                    f"[bold {ACC}]{sym:<8}[/]"
                     f"[dim]{name:<15}[/]"
                     f"[dim]{'—':>12}[/]  "
                     f"[dim]{unit:<10}[/]  "
@@ -44,7 +44,7 @@ def format_commodities(data: dict) -> str:
                 color = POS if item["pct"] >= 0 else NEG
                 arrow = "▲" if item["pct"] >= 0 else "▼"
                 lines.append(
-                    f"[bold #ffc800]{sym:<8}[/]"
+                    f"[bold {ACC}]{sym:<8}[/]"
                     f"[dim]{name:<15}[/]"
                     f"[white]{price_str:>12}[/]  "
                     f"[dim]{unit:<10}[/]  "

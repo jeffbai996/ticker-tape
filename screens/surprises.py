@@ -1,5 +1,6 @@
 """Earnings surprise tracker — watchlist-wide historical earnings performance."""
 
+from formatters import NEG, ACC, INF
 from i18n import t
 
 
@@ -38,7 +39,7 @@ def _pct_cell(val: float | None, width: int) -> str:
     if val is None:
         return f"[dim]{'—':>{width}}[/]"
     raw = f"{val:+.1f}%"            # e.g. "+75.0%" — visible cells = len(raw)
-    color = "green" if val > 0 else "#ff3232" if val < 0 else "dim"
+    color = "green" if val > 0 else NEG if val < 0 else "dim"
     return f"[{color}]{raw:>{width}}[/]"
 
 
@@ -60,7 +61,7 @@ def format_surprises(data: dict) -> str:
     # is right-justified across that combined width.
     eps_hdr_width = _W_DSIGN + 1 + _W_EPS
     hdr = (
-        f"  [bold #00c8ff]{'Symbol':<{_W_SYM}} "
+        f"  [bold {INF}]{'Symbol':<{_W_SYM}} "
         f"{'Last EPS':>{eps_hdr_width}} "
         f"{'Surprise':>{_W_SURP}} "
         f"{'Move':>{_W_MOVE}} "
@@ -94,7 +95,7 @@ def format_surprises(data: dict) -> str:
         # Beat % + detail — treat as two adjacent fixed-width columns.
         if s.get("beat_rate") is not None:
             br = s["beat_rate"] * 100
-            bc = "green" if br >= 75 else "#ffc800" if br >= 50 else "#ff3232"
+            bc = "green" if br >= 75 else ACC if br >= 50 else NEG
             rate_raw = f"{br:.0f}%"
             rate = f"[{bc}]{rate_raw:>{_W_RATE}}[/]"
             detl_raw = f"({s['beats']}/{s['total']})"
@@ -106,7 +107,7 @@ def format_surprises(data: dict) -> str:
         avg = _pct_cell(s.get("avg_move"), _W_AVG)
 
         lines.append(
-            f"  [bold #ffc800]{sym:<{_W_SYM}}[/] "
+            f"  [bold {ACC}]{sym:<{_W_SYM}}[/] "
             f"[dim]{dsign}[/] [white]{eps_num}[/] "
             f"{surp} {move} {strk} "
             f"{rate} {detl} "

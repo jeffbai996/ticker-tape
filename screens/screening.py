@@ -1,6 +1,6 @@
 """Screening table — fundamental + technical metrics for quick comparison."""
 
-from formatters import rsi_color, off_high
+from formatters import rsi_color, off_high, NEG, ACC
 from i18n import t
 
 
@@ -44,7 +44,7 @@ def format_screening(
         pfmt = f"{price:>9.2f}" if price < 1000 else f"{price:>9.0f}"
 
         # Change %
-        pct_color = "green" if pct >= 0 else "#ff3232"
+        pct_color = "green" if pct >= 0 else NEG
         pct_s = f"[{pct_color}]{pct:>+6.1f}%[/]"
 
         # RSI
@@ -82,7 +82,7 @@ def format_screening(
             # Fallback: use technicals off_high if available
             oh = ta.get("off_high")
         if oh is not None:
-            ohc = "green" if oh > -5 else "#ffc800" if oh > -20 else "#ff3232"
+            ohc = "green" if oh > -5 else ACC if oh > -20 else NEG
             oh_s = f"[{ohc}]{oh:>+6.1f}%[/]"
         else:
             oh_s = f"{'—':>7}"
@@ -98,7 +98,7 @@ def format_screening(
             vr_s = f"{'—':>6}"
 
         lines.append(
-            f" [bold #ffc800]{sym:<6}[/] {pfmt} {pct_s} {rsi_s}"
+            f" [bold {ACC}]{sym:<6}[/] {pfmt} {pct_s} {rsi_s}"
             f" {pe_s} {mcap_s} {oh_s} {vr_s}"
         )
 
