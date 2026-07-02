@@ -17,6 +17,7 @@ analyze.py filter=git-crypt diff=git-crypt
 archive.py filter=git-crypt diff=git-crypt
 pricing.py filter=git-crypt diff=git-crypt
 demo_data.py filter=git-crypt diff=git-crypt
+vecgrep_client.py filter=git-crypt diff=git-crypt
 
 # ── Demo seed data (public showcase — explicitly plaintext) ──
 data/demo/** !filter !diff
@@ -52,6 +53,8 @@ screens/technicals.py filter=git-crypt diff=git-crypt
 screens/thesis.py filter=git-crypt diff=git-crypt
 screens/valuation.py filter=git-crypt diff=git-crypt
 screens/watchlist_screen.py filter=git-crypt diff=git-crypt
+screens/cockpit.py filter=git-crypt diff=git-crypt
+screens/carry.py filter=git-crypt diff=git-crypt
 
 # ── Widgets ──
 widgets/command_bar.py filter=git-crypt diff=git-crypt
@@ -80,6 +83,9 @@ tests/test_analyze.py filter=git-crypt diff=git-crypt
 tests/test_archive.py filter=git-crypt diff=git-crypt
 tests/test_pricing.py filter=git-crypt diff=git-crypt
 tests/test_chat_tools.py filter=git-crypt diff=git-crypt
+tests/test_cockpit.py filter=git-crypt diff=git-crypt
+tests/test_carry.py filter=git-crypt diff=git-crypt
+tests/test_vecgrep_client.py filter=git-crypt diff=git-crypt
 
 # ── Superpowers docs (spec/plan reveal architecture + thesis) ──
 docs/superpowers/** filter=git-crypt diff=git-crypt
