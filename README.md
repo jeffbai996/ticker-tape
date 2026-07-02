@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.1.1*
+*v3.4.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -341,7 +341,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
 - `pyyaml` — Analyze memo front-matter serialization
-- `pytest` — 851 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views
+- `pytest` — 923 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall
 
 ## Demo
 
@@ -357,6 +357,12 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.4.0** (2026-07-02) — **Semantic recall (`recall` chat tool).** Chat could only keyword-match memos; now it can find them by meaning. Memos and the trade journal are indexed into a dedicated **vecgrep** corpus (the local-first Qdrant + bge-m3 engine), and a new `recall` agent tool queries it — "what was my take on X, and did it play out" pulls the semantically-nearest past memos/journal entries regardless of wording. The journal (JSON) is rendered to a markdown shadow so it indexes alongside the memo files; reindex runs before each recall and is incremental on vecgrep's side. Degrades to the keyword memo search if vecgrep is unreachable, so a chat turn never hard-fails. Demo mode never touches the real corpus (keyword-only). Config: `VECGREP_BIN`, `VECGREP_CORPUS`.
+
+**v3.3.0** (2026-07-02) — **Cost-of-carry dashboard.** New `carry` command: what the book costs to hold per year. Margin interest (config rate × the debit balance) netted against forward dividend income and any cash-sweep credit, shown as annual $, per-day $, and % of NLV, plus the breakeven return on the borrowed slice. The gateway exposes the debit balance and the **actual accrued interest** but not the forward rate, so the modeled interest is rendered beside IBKR's real accrual as a reality check — if they diverge, the config `MARGIN_RATE_PCT` is stale. Handles both leveraged (debit) and cash-positive books. Rates live in `config.py` (`MARGIN_RATE_PCT`, `CASH_YIELD_PCT`, `FX_CARRY_PCT`), env-overridable. Pure formatter (`screens/carry.py`), Decimal money math, parallel fetch, bilingual, canned demo data.
+
+**v3.2.0** (2026-07-02) — **Risk cockpit.** New `cockpit` command (alias `hf`) composes every margin and risk number onto one screen: a traffic-lit verdict header (cushion, distance-to-forced-liquidation), account margin state, a per-position margin-treatment table, VaR / vol / beta / drawdown, and a survivability section. The margin table derives each position's **maintenance requirement from a SELL-all what-if** (account maint before minus after) rather than assuming a flat rate — so a position carrying elevated house/concentration margin is measured from the broker's own engine and flagged when its maint/value ratio runs above the book. Every section degrades independently when a tool is unavailable; canned demo data included. Position-table parsing is now header-driven (locates the Value/Weight columns by name) so it reads both the live and demo table layouts. Pure formatter in `screens/cockpit.py`, parallel fetch in the app worker, bilingual.
 
 **v3.1.1** (2026-06-11) — **Lineup trim + cost-breakdown fix + ticker scroll repaint.** Dropped **Haiku 4.5** — too far behind Sonnet 4.6 / Opus 4.8 / Fable 5 to earn a slot (eight models now). Set **Fable 5** to `effort: medium` (adaptive thinking is steered by effort, not a token budget — medium trims spend on the 2x-cost model). Rewrote the `history` cost breakdown: it was a hardcoded list that **silently dropped Fable's cost** and showed `$0.00` for unused models — now it shows only models with spend this session, folds the GPT models into one entry (like Gemini), and lists Anthropic models individually. Fixed the **scrolling ticker tape freezing under tmux** — the marquee advanced its offset internally but the screen never repainted, because Textual coalesces the tiny per-tick (1-cell) label updates and tmux/SSH drop them; the tick now forces an explicit `refresh()` each frame.
 
