@@ -18,6 +18,7 @@ archive.py filter=git-crypt diff=git-crypt
 pricing.py filter=git-crypt diff=git-crypt
 demo_data.py filter=git-crypt diff=git-crypt
 vecgrep_client.py filter=git-crypt diff=git-crypt
+catalyst.py filter=git-crypt diff=git-crypt
 
 # ── Demo seed data (public showcase — explicitly plaintext) ──
 data/demo/** !filter !diff
@@ -86,6 +87,7 @@ tests/test_chat_tools.py filter=git-crypt diff=git-crypt
 tests/test_cockpit.py filter=git-crypt diff=git-crypt
 tests/test_carry.py filter=git-crypt diff=git-crypt
 tests/test_vecgrep_client.py filter=git-crypt diff=git-crypt
+tests/test_catalyst.py filter=git-crypt diff=git-crypt
 
 # ── Superpowers docs (spec/plan reveal architecture + thesis) ──
 docs/superpowers/** filter=git-crypt diff=git-crypt

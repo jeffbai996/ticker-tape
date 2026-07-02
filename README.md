@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.4.0*
+*v3.5.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -341,7 +341,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
 - `pyyaml` — Analyze memo front-matter serialization
-- `pytest` — 923 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall
+- `pytest` — 941 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar
 
 ## Demo
 
@@ -357,6 +357,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.5.0** (2026-07-02) — **Catalyst calendar (`catalyst` / `cx`).** A forward calendar of per-symbol events beyond earnings — conferences (GTC, OFC), product launches, policy/export-control dates, supply cycles, capex days — the catalysts a thesis turns on that no earnings feed carries. Catalysts persist in a JSON store and the view merges them with the macro econ calendar (FOMC/CPI/NFP/GDP/PCE) into one date-sorted, countdown-colored list; `catalyst SYM` filters to one name. AI chat maintains it via two new write tools (`add_catalyst`, `list_catalysts`), so you can say "add NVDA's GTC keynote on March 17" mid-conversation. Pure formatter (`catalyst.py`), bilingual, demo-seeded.
 
 **v3.4.0** (2026-07-02) — **Semantic recall (`recall` chat tool).** Chat could only keyword-match memos; now it can find them by meaning. Memos and the trade journal are indexed into a dedicated **vecgrep** corpus (the local-first Qdrant + bge-m3 engine), and a new `recall` agent tool queries it — "what was my take on X, and did it play out" pulls the semantically-nearest past memos/journal entries regardless of wording. The journal (JSON) is rendered to a markdown shadow so it indexes alongside the memo files; reindex runs before each recall and is incremental on vecgrep's side. Degrades to the keyword memo search if vecgrep is unreachable, so a chat turn never hard-fails. Demo mode never touches the real corpus (keyword-only). Config: `VECGREP_BIN`, `VECGREP_CORPUS`.
 

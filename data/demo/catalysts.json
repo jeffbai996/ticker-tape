@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "date": "2026-12-15",
+    "symbol": "NVDA",
+    "type": "conference",
+    "label": "GTC keynote (demo)"
+  },
+  {
+    "id": 2,
+    "date": "2026-11-20",
+    "symbol": "AAPL",
+    "type": "product",
+    "label": "product launch event (demo)"
+  },
+  {
+    "id": 3,
+    "date": "2027-01-10",
+    "symbol": "MSFT",
+    "type": "capex",
+    "label": "datacenter capex guide (demo)"
+  },
+  {
+    "id": 4,
+    "date": "2026-12-01",
+    "symbol": "MACRO",
+    "type": "policy",
+    "label": "export-control review window (demo)"
+  }
+]
