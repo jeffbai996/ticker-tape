@@ -1,7 +1,5 @@
 """Tests for commodities screen formatter."""
 
-import pytest
-
 from screens.commodities import _fmt_price, format_commodities
 
 

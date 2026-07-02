@@ -22,6 +22,7 @@ data/analyses/*
 !data/demo/
 .locale
 .compact_mode
+.show_usage
 
 # secrets-bearing backups (never commit)
 .env.bak*

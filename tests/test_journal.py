@@ -1,7 +1,5 @@
 """Tests for the trade journal module."""
 
-import json
-import os
 import pytest
 import journal
 

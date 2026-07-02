@@ -1,7 +1,6 @@
 """Tests for v2.5 features — db persistence, smart alerts, earnings surprises,
 timeline/surprises/sizing/briefing screen formatters."""
 
-import os
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
