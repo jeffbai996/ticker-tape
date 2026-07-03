@@ -2,7 +2,7 @@
 
 import statistics
 
-from formatters import fmt_num, ACC, NEG
+from formatters import fmt_num, ACC, NEG, EXT
 from i18n import t
 
 
@@ -54,7 +54,7 @@ def _fmt_leg(
         elif r.get("itm"):
             row += f"  [dim]{t('options.itm')}[/]"
         elif is_puts:
-            row += f"  [bold #c864ff]◆ {t('options.hedge')}[/]"
+            row += f"  [bold {EXT}]◆ {t('options.hedge')}[/]"
 
         lines.append(row)
 
