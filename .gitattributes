@@ -93,3 +93,4 @@ tests/test_catalyst.py filter=git-crypt diff=git-crypt
 docs/superpowers/** filter=git-crypt diff=git-crypt
 tests/test_lookup.py filter=git-crypt diff=git-crypt
 tests/test_demo.py filter=git-crypt diff=git-crypt
+tests/test_retry.py filter=git-crypt diff=git-crypt
