@@ -168,13 +168,21 @@ def _benchmark_curve(
 ) -> list[Decimal]:
     """Buy-and-hold the benchmark with the same starting capital as the book.
 
-    Normalized so day 0 equals book_start → the two curves share a y-axis and
-    the gap between them IS the alpha. Empty benchmark → empty curve (the
-    caller reports None, never a fabricated 0% line).
+    Normalized so the first day WITH benchmark data equals book_start → the two
+    curves share a y-axis and the gap between them IS the alpha. The benchmark
+    feed may start a few days after the first fill (thin data) — rather than
+    null the whole comparison, base off the first available price at-or-after
+    the horizon and hold it flat for any leading days before coverage. Empty
+    benchmark → empty curve (the caller reports None, never a fabricated line).
     """
     if not benchmark or not days:
         return []
-    base = benchmark.get(days[0])
+    # First benchmark price on or after the replay's first day.
+    base = None
+    for day in days:
+        if day in benchmark:
+            base = benchmark[day]
+            break
     if base is None or base == 0:
         return []
     curve: list[Decimal] = []

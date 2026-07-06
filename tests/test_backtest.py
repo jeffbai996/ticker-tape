@@ -159,6 +159,25 @@ def test_horizon_starts_at_first_fill_not_first_bar(simple_bench):
     assert r.horizon_start == date(2026, 1, 5)
 
 
+def test_benchmark_starting_after_horizon_still_produces_a_curve():
+    # Benchmark feed begins one day late (thin data). It must NOT null the
+    # whole comparison — base off the first available day and hold flat before.
+    fills = [Fill(date(2026, 1, 2), "FOO", "BUY", Decimal("10"), Decimal("100"))]
+    bars = {"FOO": {
+        date(2026, 1, 2): Decimal("100"),
+        date(2026, 1, 5): Decimal("110"),
+        date(2026, 1, 6): Decimal("120"),
+    }}
+    bench_late = {  # no 2026-01-02
+        date(2026, 1, 5): Decimal("50"),
+        date(2026, 1, 6): Decimal("55"),
+    }
+    r = assemble_backtest(fills, bars, bench_late)
+    assert len(r.benchmark_curve) == 3          # aligned to all book days
+    assert r.benchmark_curve[0] == Decimal("1000")   # flat at base before coverage
+    assert r.stats.benchmark_return_pct == pytest.approx(10.0)  # 50→55
+
+
 def test_missing_price_on_a_day_carries_last_known_not_zero():
     # If a held symbol has no bar on a trading day (holiday gap in one feed),
     # the position is marked at the last known price, never dropped to 0.
