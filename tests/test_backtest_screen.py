@@ -29,26 +29,26 @@ def _result(**over):
 
 
 def test_renders_book_and_benchmark_returns():
-    out = format_backtest(_result(), benchmark_label="SOXX")
+    out = format_backtest(_result(), benchmark_label="SPY")
     assert "20.0%" in out          # book return
     assert "10.0%" in out          # benchmark return / alpha
-    assert "SOXX" in out
+    assert "SPY" in out
 
 
 def test_renders_alpha():
-    out = format_backtest(_result(), benchmark_label="SOXX")
+    out = format_backtest(_result(), benchmark_label="SPY")
     # alpha is book - benchmark = +10%; label present
     assert "alpha" in out.lower() or "α" in out
 
 
 def test_shows_horizon_start_date():
-    out = format_backtest(_result(), benchmark_label="SOXX")
+    out = format_backtest(_result(), benchmark_label="SPY")
     assert "2026-01-02" in out
 
 
 def test_empty_result_is_graceful():
     empty = BacktestResult([], [], [], [], None, None)
-    out = format_backtest(empty, benchmark_label="SOXX")
+    out = format_backtest(empty, benchmark_label="SPY")
     assert out                      # returns something, doesn't crash
     assert "%" not in out or "no" in out.lower()   # no fabricated return numbers
 
@@ -58,7 +58,7 @@ def test_missing_benchmark_shows_book_only_not_fake_alpha():
         benchmark_curve=[],
         stats=BacktestStats(20.0, None, None, -0.0),
     )
-    out = format_backtest(r, benchmark_label="SOXX")
+    out = format_backtest(r, benchmark_label="SPY")
     assert "20.0%" in out                      # book return still shown
     # no fabricated benchmark/alpha number
     assert "n/a" in out.lower() or "—" in out or "unavailable" in out.lower()

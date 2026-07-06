@@ -9,7 +9,7 @@ optimizer. The gap between the two curves is your alpha.
 ```
 backtest          replay vs the default benchmark (config.RS_BENCHMARK)
 bt                same
-bt SOXX           replay vs a specific benchmark symbol
+bt SPY            replay vs a specific benchmark symbol
 replay QQQ        same
 ```
 
@@ -24,9 +24,9 @@ box). Format:
 
 ```csv
 date,symbol,side,qty,price
-2022-03-15,NVDA,BUY,100,25.50
-2024-06-01,NVDA,SELL,40,120.00
-2024-09-04,MU,BUY,50,95.00
+2022-03-15,MSFT,BUY,100,250.50
+2024-06-01,MSFT,SELL,40,420.00
+2024-09-04,AAPL,BUY,50,220.00
 ```
 
 - `date` ISO (`YYYY-MM-DD`), `side` is `BUY`/`SELL` (case-insensitive),
@@ -54,5 +54,5 @@ a fake `0%`.
 
 ## Demo
 
-`ticker-tape --demo` seeds a deterministic fake ledger on generic tickers, so
-`bt` shows the full shape with no network and no real data.
+`ticker-tape --demo` seeds a deterministic sample ledger on the demo universe,
+so `bt` shows the full shape with no network and no real data.

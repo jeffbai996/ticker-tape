@@ -104,7 +104,7 @@ def _mark_axis(dates: list[date], marks, width: int = 58) -> str:
     return "  " + "".join(slots)
 
 
-def format_backtest(result: BacktestResult, benchmark_label: str = "SOXX") -> str:
+def format_backtest(result: BacktestResult, benchmark_label: str = "QQQ") -> str:
     """Render a BacktestResult as an ASCII replay chart + stats block."""
     if not result.dates or not result.book_curve:
         return f"[dim]{t('backtest.empty')}[/]"

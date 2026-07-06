@@ -93,7 +93,7 @@ def assemble_backtest(
     Args:
         fills: realized executions (any order; sorted internally).
         bars: {symbol: {date: close}} — daily closes per held symbol.
-        benchmark: {date: close} — the comparison index (e.g. SOXX).
+        benchmark: {date: close} — the comparison index (e.g. SPY).
 
     Returns a BacktestResult; empty/degenerate inputs yield an empty result
     rather than raising or inventing numbers.

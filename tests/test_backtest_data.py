@@ -61,11 +61,11 @@ def test_load_fills_ledger_skips_malformed_rows_without_crashing(tmp_path):
 
 def test_symbols_from_fills_is_sorted_unique():
     fills = [
-        Fill(date(2022, 1, 1), "MU", "BUY", Decimal("1"), Decimal("1")),
-        Fill(date(2022, 1, 2), "AVGO", "BUY", Decimal("1"), Decimal("1")),
-        Fill(date(2022, 1, 3), "MU", "SELL", Decimal("1"), Decimal("1")),
+        Fill(date(2022, 1, 1), "MSFT", "BUY", Decimal("1"), Decimal("1")),
+        Fill(date(2022, 1, 2), "AAPL", "BUY", Decimal("1"), Decimal("1")),
+        Fill(date(2022, 1, 3), "MSFT", "SELL", Decimal("1"), Decimal("1")),
     ]
-    assert backtest_data.symbols_from_fills(fills) == ["AVGO", "MU"]
+    assert backtest_data.symbols_from_fills(fills) == ["AAPL", "MSFT"]
 
 
 # ── dated price bars (yfinance-backed, but the parse is what we test) ────
