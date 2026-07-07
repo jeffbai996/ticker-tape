@@ -21,6 +21,7 @@ import csv
 import logging
 import math
 import os
+from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -31,34 +32,50 @@ log = logging.getLogger(__name__)
 
 # ── fills ledger ────────────────────────────────────────────────────────
 
-def load_fills_ledger(path: str) -> list[Fill]:
-    """Parse a CSV fills ledger into Fill records.
+@dataclass(frozen=True)
+class LedgerFill:
+    """A ledger row: the fill plus the currency it traded in.
 
-    Columns: date (ISO), symbol, side (BUY/SELL), qty, price. Malformed rows
-    are skipped with a warning, never fatal — a seeded ledger is hand-edited
-    and one bad line shouldn't sink the whole replay. Missing file → [].
+    The pure core is single-currency by design — currency lives out here in
+    the data layer, where backtest_fx normalizes everything to the report
+    currency before the core ever sees a number.
+    """
+    fill: Fill
+    currency: str  # "USD", "CAD", ...
+
+
+def load_fills_ledger(path: str) -> list[LedgerFill]:
+    """Parse a CSV fills ledger into LedgerFill records.
+
+    Columns: date (ISO), symbol, side (BUY/SELL), qty, price, and an optional
+    currency (defaults to USD so pre-currency ledgers keep working). Malformed
+    rows are skipped with a warning, never fatal — a seeded ledger is
+    hand-edited and one bad line shouldn't sink the whole replay.
+    Missing file → [].
     """
     if not os.path.exists(path):
         log.info("fills ledger not found: %s", path)
         return []
 
-    fills: list[Fill] = []
+    ledger: list[LedgerFill] = []
     with open(path, newline="") as fh:
         reader = csv.DictReader(fh)
         for i, row in enumerate(reader, start=2):  # line 1 is the header
             try:
-                fills.append(Fill(
+                fill = Fill(
                     date=datetime.strptime(row["date"].strip(), "%Y-%m-%d").date(),
                     symbol=row["symbol"].strip().upper(),
                     side=row["side"].strip().upper(),
                     qty=Decimal(row["qty"].strip()),
                     price=Decimal(row["price"].strip()),
-                ))
+                )
+                currency = (row.get("currency") or "USD").strip().upper() or "USD"
+                ledger.append(LedgerFill(fill, currency))
             except (KeyError, ValueError, TypeError, InvalidOperation, AttributeError) as e:
                 log.warning("skipping malformed ledger row %d: %s", i, e)
                 continue
-    fills.sort(key=lambda f: (f.date, f.symbol))
-    return fills
+    ledger.sort(key=lambda lf: (lf.fill.date, lf.fill.symbol))
+    return ledger
 
 
 def symbols_from_fills(fills: list[Fill]) -> list[str]:

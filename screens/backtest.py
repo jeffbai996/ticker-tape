@@ -104,8 +104,10 @@ def _mark_axis(dates: list[date], marks, width: int = 58) -> str:
     return "  " + "".join(slots)
 
 
-def format_backtest(result: BacktestResult, benchmark_label: str = "QQQ") -> str:
-    """Render a BacktestResult as an ASCII replay chart + stats block."""
+def format_backtest(result: BacktestResult, benchmark_label: str = "QQQ",
+                    ccy: str = "USD") -> str:
+    """Render a BacktestResult as an ASCII replay chart + stats block.
+    `ccy` labels the report currency everything was normalized to."""
     if not result.dates or not result.book_curve:
         return f"[dim]{t('backtest.empty')}[/]"
 
@@ -127,7 +129,8 @@ def format_backtest(result: BacktestResult, benchmark_label: str = "QQQ") -> str
     # legend
     lines.append(
         f"  [green]█[/] [dim]{t('backtest.book')}[/]   "
-        f"[dim]·[/] [dim]{benchmark_label} {t('backtest.buyhold')}[/]"
+        f"[dim]·[/] [dim]{benchmark_label} {t('backtest.buyhold')}[/]   "
+        f"[dim]({ccy})[/]"
     )
     lines.append("")
 

@@ -25,19 +25,38 @@ def test_load_fills_ledger_parses_rows(tmp_path):
         "2022-03-15,NVDA,BUY,100,25.50\n"
         "2024-06-01,NVDA,SELL,40,120.00\n"
     )
-    fills = backtest_data.load_fills_ledger(str(p))
-    assert fills == [
+    ledger = backtest_data.load_fills_ledger(str(p))
+    assert [lf.fill for lf in ledger] == [
         Fill(date(2022, 3, 15), "NVDA", "BUY", Decimal("100"), Decimal("25.50")),
         Fill(date(2024, 6, 1), "NVDA", "SELL", Decimal("40"), Decimal("120.00")),
     ]
 
 
+def test_load_fills_ledger_currency_column_optional_defaults_usd(tmp_path):
+    p = tmp_path / "fills.csv"
+    p.write_text("date,symbol,side,qty,price\n2023-01-01,NVDA,BUY,10,50\n")
+    ledger = backtest_data.load_fills_ledger(str(p))
+    assert ledger[0].currency == "USD"
+
+
+def test_load_fills_ledger_parses_currency_column(tmp_path):
+    p = tmp_path / "fills.csv"
+    p.write_text(
+        "date,symbol,side,qty,price,currency\n"
+        "2023-01-01,NVDA.NE,BUY,10,50,cad\n"
+        "2023-01-02,NVDA,BUY,10,500,USD\n"
+    )
+    ledger = backtest_data.load_fills_ledger(str(p))
+    assert ledger[0].currency == "CAD"   # normalized upper
+    assert ledger[1].currency == "USD"
+
+
 def test_load_fills_ledger_normalizes_side_and_symbol_case(tmp_path):
     p = tmp_path / "fills.csv"
     p.write_text("date,symbol,side,qty,price\n2023-01-01,nvda,buy,10,50\n")
-    fills = backtest_data.load_fills_ledger(str(p))
-    assert fills[0].symbol == "NVDA"
-    assert fills[0].side == "BUY"
+    ledger = backtest_data.load_fills_ledger(str(p))
+    assert ledger[0].fill.symbol == "NVDA"
+    assert ledger[0].fill.side == "BUY"
 
 
 def test_load_fills_ledger_missing_file_returns_empty(tmp_path):
@@ -53,10 +72,10 @@ def test_load_fills_ledger_skips_malformed_rows_without_crashing(tmp_path):
         "2022-bad-date,NVDA,BUY,1,1\n"             # unparseable date
         "2024-06-01,NVDA,SELL,40,120.00\n"
     )
-    fills = backtest_data.load_fills_ledger(str(p))
+    ledger = backtest_data.load_fills_ledger(str(p))
     # the two valid rows survive; the two bad ones are skipped, not fatal
-    assert len(fills) == 2
-    assert fills[0].symbol == "NVDA" and fills[1].side == "SELL"
+    assert len(ledger) == 2
+    assert ledger[0].fill.symbol == "NVDA" and ledger[1].fill.side == "SELL"
 
 
 def test_symbols_from_fills_is_sorted_unique():
