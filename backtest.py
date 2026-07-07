@@ -59,6 +59,76 @@ class BacktestResult:
     warnings: list[str] = field(default_factory=list)
 
 
+class PositionBook:
+    """Mutable running state of a book as fills are applied in date order.
+
+    This is the SINGLE source of truth for the matched-sell / average-cost /
+    principal-stays-in-basis semantics. `assemble_backtest` walks the calendar
+    and applies each day's fills through `apply`; the time-travel replay
+    (`timetravel.reconstruct_as_of`) applies every fill up to a cutoff date and
+    then reads the same per-symbol state. Keeping both paths on this one class
+    means the two views can never silently drift apart.
+
+    Money is `Decimal`. A SELL with no/insufficient prior BUY is clamped (never
+    drives qty negative, never fabricates P&L on the unheld portion) and appends
+    a human-readable warning — identical to the equity-curve path because it IS
+    that path.
+    """
+
+    def __init__(self) -> None:
+        self.qty: dict[str, Decimal] = {}          # open shares per symbol
+        self.avg_cost: dict[str, Decimal] = {}     # average cost per open share
+        self.cumulative_basis = Decimal("0")       # cost of every buy ever (principal)
+        self.realized_gains = Decimal("0")
+        self.warnings: list[str] = []
+
+    def apply(self, f: Fill) -> None:
+        """Apply one fill, mutating the book in place."""
+        held = self.qty.get(f.symbol, Decimal("0"))
+        if f.side == "BUY":
+            self.cumulative_basis += f.qty * f.price
+            new_qty = held + f.qty
+            prior_cost = self.avg_cost.get(f.symbol, Decimal("0")) * held
+            self.avg_cost[f.symbol] = (prior_cost + f.qty * f.price) / new_qty
+            self.qty[f.symbol] = new_qty
+        else:  # SELL: realize gain vs average cost, principal stays in basis
+            # A ledger can carry a SELL with no (or insufficient) prior BUY
+            # — e.g. a ledger that starts mid-position. Only the HELD portion
+            # has a real cost basis; realizing P&L on the rest would fabricate
+            # a number. The unmatched portion is skipped and surfaced.
+            matched = min(f.qty, held) if held > 0 else Decimal("0")
+            if matched > 0:
+                basis = self.avg_cost[f.symbol]
+                self.realized_gains += matched * (f.price - basis)
+            unmatched = f.qty - matched
+            if unmatched > 0:
+                self.warnings.append(
+                    f"SELL {f.qty} {f.symbol} on {f.date.isoformat()}: "
+                    f"only {held} held — {unmatched} unmatched, skipped"
+                )
+            self.qty[f.symbol] = held - matched  # clamp at 0, never negative
+
+    def unrealized(
+        self, prices: dict[str, Decimal], last_price: dict[str, Decimal] | None = None
+    ) -> Decimal:
+        """Total unrealized gain on open positions marked to `prices`.
+
+        `prices` is {symbol: mark} for this instant. A symbol absent from
+        `prices` carries its `last_price` (a feed gap), and if neither has a
+        price the position is skipped (never marked to 0 from a gap).
+        """
+        last_price = last_price or {}
+        total = Decimal("0")
+        for sym, held in self.qty.items():
+            if held == 0:
+                continue
+            px = prices.get(sym, last_price.get(sym))
+            if px is None:
+                continue
+            total += held * (px - self.avg_cost[sym])
+        return total
+
+
 def _sorted_trading_days(
     fills: list[Fill],
     bars: dict[str, dict[date, Decimal]],
@@ -123,60 +193,33 @@ def assemble_backtest(
     for f in fills:
         fills_by_day.setdefault(f.date, []).append(f)
 
-    qty: dict[str, Decimal] = {}          # open shares per symbol
-    avg_cost: dict[str, Decimal] = {}     # average cost basis per open share
-    cumulative_basis = Decimal("0")       # cost of every buy ever (the principal)
-    realized_gains = Decimal("0")
+    book = PositionBook()
     last_price: dict[str, Decimal] = {}
-    warnings: list[str] = []
 
     book_curve: list[Decimal] = []
     for day in days:
         # Apply the day's fills before marking, so a same-day buy is held.
         for f in fills_by_day.get(day, []):
-            held = qty.get(f.symbol, Decimal("0"))
-            if f.side == "BUY":
-                cumulative_basis += f.qty * f.price
-                new_qty = held + f.qty
-                prior_cost = avg_cost.get(f.symbol, Decimal("0")) * held
-                avg_cost[f.symbol] = (prior_cost + f.qty * f.price) / new_qty
-                qty[f.symbol] = new_qty
-            else:  # SELL: realize gain vs average cost, principal stays in basis
-                # A ledger can carry a SELL with no (or insufficient) prior BUY
-                # — e.g. a ledger that starts mid-position. Only the HELD
-                # portion has a real cost basis; realizing P&L on the rest
-                # would fabricate a number (and defaulting basis to the sell
-                # price itself, the old bug, always books that portion at
-                # exactly $0 gain — silently wrong, not honestly absent).
-                matched = min(f.qty, held) if held > 0 else Decimal("0")
-                if matched > 0:
-                    basis = avg_cost[f.symbol]
-                    realized_gains += matched * (f.price - basis)
-                unmatched = f.qty - matched
-                if unmatched > 0:
-                    warnings.append(
-                        f"SELL {f.qty} {f.symbol} on {f.date.isoformat()}: "
-                        f"only {held} held — {unmatched} unmatched, skipped"
-                    )
-                qty[f.symbol] = held - matched  # clamp at 0, never negative
+            book.apply(f)
 
         # Unrealized gain on open positions, marked to the day's close
-        # (carry last-known price on a feed gap — never drop to 0).
-        unrealized = Decimal("0")
-        for sym, held in qty.items():
-            if held == 0:
-                continue
+        # (carry last-known price on a feed gap — never drop to 0). Prices for
+        # symbols that have a bar today are pinned into `last_price` so a later
+        # gap carries this day's close, matching the historical behavior.
+        marks_today: dict[str, Decimal] = {}
+        for sym in book.qty:
             px = _price_on(bars.get(sym, {}), day, last_price.get(sym))
-            if px is None:
-                continue
-            last_price[sym] = px
-            unrealized += held * (px - avg_cost[sym])
+            if px is not None:
+                marks_today[sym] = px
+                last_price[sym] = px
+        unrealized = book.unrealized(marks_today)
 
-        book_curve.append(cumulative_basis + realized_gains + unrealized)
+        book_curve.append(book.cumulative_basis + book.realized_gains + unrealized)
 
     benchmark_curve = _benchmark_curve(benchmark, days, book_curve[0])
     stats = _compute_stats(book_curve, benchmark_curve)
-    return BacktestResult(days, book_curve, benchmark_curve, marks, stats, horizon_start, warnings)
+    return BacktestResult(days, book_curve, benchmark_curve, marks, stats,
+                          horizon_start, book.warnings)
 
 
 def _benchmark_curve(
