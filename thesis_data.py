@@ -51,6 +51,7 @@ def load_snapshot(base_dir: str) -> dict:
             "severity": str(b.get("severity", "")),
             "auto": str(spec.get("type")) != "manual",
             "swept": bool(b.get("sweep")),
+            "earnings": bool(b.get("earnings")),
         }
 
     try:

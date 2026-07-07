@@ -56,7 +56,8 @@ def format_breakers(snap: dict) -> str:
         style = _VERDICT_STYLE.get(b["verdict"], "dim")
         flags = "".join(
             f" [dim]{f}[/]" for f, on in
-            (("auto", b.get("auto")), ("swept", b.get("swept"))) if on)
+            (("auto", b.get("auto")), ("swept", b.get("swept")),
+             ("qtr", b.get("earnings"))) if on)
         lines.append(f"  [{style}]{b['verdict']:<18}[/] [bold]{b['id']}[/]"
                      f" [dim]({b.get('category', '')}/{b.get('severity', '')})[/]{flags}")
         if b["verdict"] == "FIRED" and b.get("reason"):
