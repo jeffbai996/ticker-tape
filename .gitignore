@@ -34,3 +34,6 @@ data/demo/clipboard.txt
 
 # Event-tape enabled-state toggle (local UI preference)
 .event_tape
+
+# Per-fill thesis notes (local user data)
+data/fill_notes.json
