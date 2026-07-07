@@ -31,3 +31,6 @@ data/analyses/*
 data/demo/analyses/_index.json
 data/demo/exports/
 data/demo/clipboard.txt
+
+# Event-tape enabled-state toggle (local UI preference)
+.event_tape
