@@ -22,7 +22,7 @@ import logging
 import math
 import os
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from backtest import Fill
@@ -121,9 +121,13 @@ def fetch_dated_closes(
 
     end = end or date.today()
     try:
+        # yfinance's `end` is EXCLUSIVE — pad by one day so this function's
+        # own [start, end] contract (inclusive) actually includes `end`.
+        # auto_adjust=False: the fills ledger stores RAW traded prices, so
+        # mixing in split/dividend-adjusted closes would corrupt the curve.
         df = data._retry_download(
-            symbols, start=start.isoformat(), end=end.isoformat(),
-            interval="1d", progress=False,
+            symbols, start=start.isoformat(), end=(end + timedelta(days=1)).isoformat(),
+            interval="1d", progress=False, auto_adjust=False,
         )
     except Exception as e:
         log.warning("fetch_dated_closes download failed: %s", e)
@@ -149,3 +153,37 @@ def _demo_dated_closes(symbols, start, end):
     if hasattr(demo_data, "fetch_dated_closes"):
         return demo_data.fetch_dated_closes(symbols, start, end)
     return {}
+
+
+# ── corporate-action awareness ──────────────────────────────────────────
+
+def detect_splits_in_window(sym: str, window_start: date, window_end: date) -> list[str]:
+    """Best-effort check for stock splits within [window_start, window_end].
+
+    A split inside the ledger's window means share counts/prices before vs
+    after the split aren't directly comparable without adjustment — worth
+    flagging, never worth failing the backtest over. Skipped in demo mode
+    (no network, no real symbols) and never raises: a splits-fetch hiccup
+    must not break the replay, it's an FYI, not load-bearing data.
+    """
+    import config
+    if config.DEMO_MODE:
+        return []
+
+    import yfinance as yf
+
+    warnings: list[str] = []
+    try:
+        splits = yf.Ticker(sym).splits
+    except Exception as e:
+        log.warning("split lookup failed for %s: %s", sym, e)
+        return []
+
+    for ts, ratio in splits.items():
+        d = ts.date() if hasattr(ts, "date") else ts
+        if window_start <= d <= window_end:
+            warnings.append(
+                f"{sym} split {ratio:g}:1 on {d.isoformat()} inside ledger window — "
+                f"share counts/prices may need corporate-action adjustment"
+            )
+    return warnings

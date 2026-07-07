@@ -6,7 +6,7 @@ over its recorded state. Distinct from screens/thesis.py (the holdings
 bucket dashboard) — this one is the sell-discipline checklist.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from formatters import NEG, ACC
 from i18n import t
@@ -22,7 +22,11 @@ _VERDICT_STYLE = {
 def _age(epoch: float | None) -> str:
     if not epoch:
         return ""
-    delta = datetime.now() - datetime.fromtimestamp(epoch)
+    # House discipline (data.py's ZoneInfo/UTC usage, db.py's
+    # datetime.now(timezone.utc)) does wall-clock math with explicit
+    # tz-aware datetimes rather than two naive local-time calls that only
+    # cancel out by coincidence of both using the same process tz.
+    delta = datetime.now(timezone.utc) - datetime.fromtimestamp(epoch, tz=timezone.utc)
     hours = delta.total_seconds() / 3600
     if hours < 1:
         return f"{delta.total_seconds() / 60:.0f}m ago"

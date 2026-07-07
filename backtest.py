@@ -15,7 +15,7 @@ empty result.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
@@ -56,6 +56,7 @@ class BacktestResult:
     marks: list[Mark]
     stats: BacktestStats | None
     horizon_start: date | None
+    warnings: list[str] = field(default_factory=list)
 
 
 def _sorted_trading_days(
@@ -127,6 +128,7 @@ def assemble_backtest(
     cumulative_basis = Decimal("0")       # cost of every buy ever (the principal)
     realized_gains = Decimal("0")
     last_price: dict[str, Decimal] = {}
+    warnings: list[str] = []
 
     book_curve: list[Decimal] = []
     for day in days:
@@ -140,9 +142,23 @@ def assemble_backtest(
                 avg_cost[f.symbol] = (prior_cost + f.qty * f.price) / new_qty
                 qty[f.symbol] = new_qty
             else:  # SELL: realize gain vs average cost, principal stays in basis
-                basis = avg_cost.get(f.symbol, f.price)
-                realized_gains += f.qty * (f.price - basis)
-                qty[f.symbol] = held - f.qty
+                # A ledger can carry a SELL with no (or insufficient) prior BUY
+                # — e.g. a ledger that starts mid-position. Only the HELD
+                # portion has a real cost basis; realizing P&L on the rest
+                # would fabricate a number (and defaulting basis to the sell
+                # price itself, the old bug, always books that portion at
+                # exactly $0 gain — silently wrong, not honestly absent).
+                matched = min(f.qty, held) if held > 0 else Decimal("0")
+                if matched > 0:
+                    basis = avg_cost[f.symbol]
+                    realized_gains += matched * (f.price - basis)
+                unmatched = f.qty - matched
+                if unmatched > 0:
+                    warnings.append(
+                        f"SELL {f.qty} {f.symbol} on {f.date.isoformat()}: "
+                        f"only {held} held — {unmatched} unmatched, skipped"
+                    )
+                qty[f.symbol] = held - matched  # clamp at 0, never negative
 
         # Unrealized gain on open positions, marked to the day's close
         # (carry last-known price on a feed gap — never drop to 0).
@@ -160,7 +176,7 @@ def assemble_backtest(
 
     benchmark_curve = _benchmark_curve(benchmark, days, book_curve[0])
     stats = _compute_stats(book_curve, benchmark_curve)
-    return BacktestResult(days, book_curve, benchmark_curve, marks, stats, horizon_start)
+    return BacktestResult(days, book_curve, benchmark_curve, marks, stats, horizon_start, warnings)
 
 
 def _benchmark_curve(

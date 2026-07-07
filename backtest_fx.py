@@ -54,8 +54,12 @@ def needs_fx(ledger: list[LedgerFill], report_ccy: str, bench_ccy: str) -> bool:
 
 # ── rate lookup ─────────────────────────────────────────────────────────
 
-def _rate_for(usdcad: dict[date, Decimal], day: date) -> Decimal:
-    """USDCAD rate for `day`: exact, else last-known before, else first after."""
+def _rate_for(
+    usdcad: dict[date, Decimal], day: date, warnings: list[date] | None = None
+) -> Decimal:
+    """USDCAD rate for `day`: exact, else last-known before, else first
+    available (day predates the series — record it in `warnings` so the
+    caller can emit ONE deduped notice per run instead of one per fill)."""
     if not usdcad:
         raise ValueError("FX conversion needed but no USDCAD data available")
     if day in usdcad:
@@ -63,14 +67,17 @@ def _rate_for(usdcad: dict[date, Decimal], day: date) -> Decimal:
     before = [d for d in usdcad if d < day]
     if before:
         return usdcad[max(before)]
+    if warnings is not None:
+        warnings.append(day)
     return usdcad[min(usdcad)]
 
 
 def _convert(amount: Decimal, ccy: str, report_ccy: str,
-             day: date, usdcad: dict[date, Decimal]) -> Decimal:
+             day: date, usdcad: dict[date, Decimal],
+             pre_series_days: list[date] | None = None) -> Decimal:
     if ccy == report_ccy:
         return amount
-    rate = _rate_for(usdcad, day)
+    rate = _rate_for(usdcad, day, pre_series_days)
     if ccy == "USD" and report_ccy == "CAD":
         return amount * rate
     if ccy == "CAD" and report_ccy == "USD":
@@ -81,19 +88,34 @@ def _convert(amount: Decimal, ccy: str, report_ccy: str,
 # ── conversion passes ───────────────────────────────────────────────────
 
 def convert_fills(ledger: list[LedgerFill], report_ccy: str,
-                  usdcad: dict[date, Decimal]) -> list[Fill]:
-    """Ledger → plain Fills in the report currency, each at its fill-date rate."""
-    return [
+                  usdcad: dict[date, Decimal],
+                  warnings: list[str] | None = None) -> list[Fill]:
+    """Ledger → plain Fills in the report currency, each at its fill-date rate.
+
+    If `warnings` is passed, appends ONE deduped notice when any fill predates
+    the FX series (rather than one warning per fill, which would flood a
+    long-running book that started years before FX coverage).
+    """
+    pre_series_days: list[date] = []
+    fills = [
         Fill(
             date=lf.fill.date,
             symbol=lf.fill.symbol,
             side=lf.fill.side,
             qty=lf.fill.qty,
             price=_convert(lf.fill.price, lf.currency, report_ccy,
-                           lf.fill.date, usdcad),
+                           lf.fill.date, usdcad, pre_series_days),
         )
         for lf in ledger
     ]
+    if warnings is not None and pre_series_days and usdcad:
+        earliest_fill = min(pre_series_days)
+        series_start = min(usdcad)
+        warnings.append(
+            f"FX rate unavailable before {series_start.isoformat()} (series start) — "
+            f"fill(s) as early as {earliest_fill.isoformat()} used earliest available rate"
+        )
+    return fills
 
 
 def convert_bars(
@@ -131,5 +153,8 @@ def fetch_usdcad(start: date, end: date | None = None) -> dict[date, Decimal]:
         return {start + timedelta(days=i): rate for i in range(days)}
 
     import backtest_data
+    # Routes through backtest_data.fetch_dated_closes, which already pins
+    # auto_adjust=False and pads `end` +1 day at the yfinance call boundary
+    # (FX has no splits, but pinning keeps the call explicit/deterministic).
     series = backtest_data.fetch_dated_closes([USDCAD_TICKER], start, end)
     return series.get(USDCAD_TICKER, {})

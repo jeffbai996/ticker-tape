@@ -115,6 +115,12 @@ def format_backtest(result: BacktestResult, benchmark_label: str = "QQQ",
     bench = [float(v) for v in result.benchmark_curve]
 
     lines: list[str] = []
+    # Data-quality caveats (unmatched sells, FX pre-series fallback, splits)
+    # go at the TOP — read these before trusting the curve below.
+    for w in result.warnings:
+        lines.append(f"[dim yellow]⚠ {w}[/]")
+    if result.warnings:
+        lines.append("")
     lines.extend(_overlay_chart(result.dates, book, bench))
     axis = _mark_axis(result.dates, result.marks)
     if axis:
