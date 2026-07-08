@@ -65,6 +65,13 @@ def format_breakers(snap: dict) -> str:
         f"[dim]{h['fired']} {t('breakers.fired')} · "
         f"{h['clear']} {t('breakers.holding')} · "
         f"{h['awaiting']} {t('breakers.awaiting')}[/]")
+    rot = (snap.get("rotation") or {})
+    cur = rot.get("current")
+    if cur:
+        flag = (f"  [bold yellow]{t('breakers.rederive')}[/]"
+                if rot.get("needs_review") else "")
+        lines.append(f"  [dim]{t('breakers.rotation')}:[/] "
+                     f"[{ACC}]{cur['estimate']}[/]{flag}")
     nxt = snap.get("next_catalyst")
     if nxt:
         lines.append(f"  [dim]{t('breakers.next_catalyst')}:[/] "

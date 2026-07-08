@@ -19,7 +19,9 @@ log = logging.getLogger(__name__)
 
 def _empty() -> dict:
     return {"available": False, "breakers": [], "candidates": [],
-            "last_run": None, "catalysts": [], "next_catalyst": None}
+            "last_run": None, "catalysts": [], "next_catalyst": None,
+            "rotation": {"current": None, "history": [],
+                         "needs_review": False}}
 
 
 def synthesize(snap: dict) -> dict:
@@ -48,6 +50,10 @@ def synthesize(snap: dict) -> dict:
         "state": "BREACHED" if fired else "INTACT",
         "fired": len(fired), "clear": len(clear),
         "awaiting": len(awaiting)}
+    # a FIRED reunderwrite breaker means the rotation date itself is suspect
+    rot = snap.setdefault("rotation", {"current": None, "history": []})
+    rot["needs_review"] = any(
+        b.get("severity") == "reunderwrite" for b in fired)
     return snap
 
 
@@ -112,6 +118,12 @@ def load_snapshot(base_dir: str) -> dict:
         cands = con.execute(
             "SELECT id, breaker_id, summary, evidence, url, created_at "
             "FROM candidate WHERE status='new' ORDER BY id").fetchall()
+        try:
+            rot_rows = con.execute(
+                "SELECT estimate, note, breaker_id, set_at "
+                "FROM rotation_estimate ORDER BY id DESC LIMIT 10").fetchall()
+        except sqlite3.Error:
+            rot_rows = []   # pre-rotation watcher db
         con.close()
     except sqlite3.Error as e:
         log.warning("thesis state unreadable: %s", e)
@@ -133,6 +145,13 @@ def load_snapshot(base_dir: str) -> dict:
     out["candidates"] = [
         {"id": c[0], "breaker_id": c[1], "summary": c[2], "evidence": c[3],
          "url": c[4], "created_at": c[5]} for c in cands]
+    out["rotation"] = {
+        "current": ({"estimate": rot_rows[0][0], "note": rot_rows[0][1],
+                     "breaker_id": rot_rows[0][2], "set_at": rot_rows[0][3]}
+                    if rot_rows else None),
+        "history": [{"estimate": r[0], "note": r[1], "breaker_id": r[2],
+                     "set_at": r[3]} for r in rot_rows],
+        "needs_review": False}
     out["catalysts"] = _load_catalysts(base)
     today = date.today().isoformat()
     out["next_catalyst"] = next(

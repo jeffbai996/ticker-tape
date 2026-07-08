@@ -162,3 +162,20 @@ def test_plain_snap_without_synthesis_keys_still_renders():
     # formatter self-synthesizes — the raw load_snapshot dict is enough
     out = format_breakers(_snap())
     assert "FIRED" in out and "capex_cut" in out
+
+
+def test_rotation_line_rendered():
+    out = format_breakers(_snap(breakers=[
+        {"id": "rates_high", "verdict": "CLEAR", "category": "macro",
+         "severity": "trim", "reason": "", "auto": True, "swept": False}],
+        candidates=[],
+        rotation={"current": {"estimate": "2028-06", "note": "initial"},
+                  "history": []}))
+    assert "2028-06" in out
+
+
+def test_rotation_review_flag_rendered():
+    out = format_breakers(_snap(
+        rotation={"current": {"estimate": "2028-06", "note": "n"},
+                  "history": [], "needs_review": True}))
+    assert "2028-06" in out

@@ -127,3 +127,35 @@ def test_past_catalysts_not_next(tmp_path):
 def test_missing_catalysts_file_is_empty_list(tmp_path):
     snap = thesis_data.load_snapshot(str(_seed(tmp_path)))
     assert snap["catalysts"] == [] and snap["next_catalyst"] is None
+
+
+# ── rotation estimate passthrough ──────────────────────────────────────
+
+def test_rotation_current_in_snapshot(tmp_path):
+    base = _seed(tmp_path)
+    con = sqlite3.connect(base / "data" / "watcher.db")
+    con.executescript("""
+      CREATE TABLE rotation_estimate (id INTEGER PRIMARY KEY AUTOINCREMENT,
+        estimate TEXT, note TEXT, breaker_id TEXT DEFAULT '', set_at REAL);
+    """)
+    con.execute("INSERT INTO rotation_estimate (estimate, note, set_at) "
+                "VALUES ('2028-06','initial',1751900000)")
+    con.commit(); con.close()
+    snap = thesis_data.load_snapshot(str(base))
+    assert snap["rotation"]["current"]["estimate"] == "2028-06"
+    assert snap["rotation"]["needs_review"] is False
+
+
+def test_rotation_missing_table_is_none(tmp_path):
+    snap = thesis_data.load_snapshot(str(_seed(tmp_path)))
+    assert snap["rotation"]["current"] is None
+
+
+def test_rotation_needs_review_when_reunderwrite_fires():
+    snap = {"available": True, "breakers": [
+        {"id": "a", "verdict": "FIRED", "auto": True,
+         "severity": "reunderwrite", "reason": "", "category": "x"}],
+        "candidates": [], "last_run": None,
+        "rotation": {"current": {"estimate": "2028-06"}, "history": []}}
+    thesis_data.synthesize(snap)
+    assert snap["rotation"]["needs_review"] is True
