@@ -47,3 +47,83 @@ def test_snapshot_joins_registry_and_state(tmp_path):
 def test_missing_watcher_dir_is_honest_empty(tmp_path):
     snap = thesis_data.load_snapshot(str(tmp_path / "nope"))
     assert snap["available"] is False and snap["breakers"] == []
+
+
+# ── synthesis: groups / health / catalysts ─────────────────────────────
+# The raw snapshot answers "what does each detector return"; the surfaces
+# want "is the thesis intact and what do I still owe it". synthesize() is
+# pure + idempotent: grouping by verdict AND detector type (a manual
+# breaker with no input is actionable "awaiting"; an auto one is merely
+# "warming up"), a one-line health verdict, and the next catalyst date.
+
+def _bk(bid, verdict, auto=True, severity="trim"):
+    return {"id": bid, "verdict": verdict, "auto": auto,
+            "severity": severity, "reason": "", "category": "x"}
+
+
+def test_synthesis_groups_fired_clear_awaiting_nodata():
+    snap = {"available": True, "breakers": [
+        _bk("a", "FIRED"), _bk("b", "CLEAR"),
+        _bk("c", "INSUFFICIENT_DATA", auto=False),   # manual → awaiting
+        _bk("d", "INSUFFICIENT_DATA", auto=True),    # auto → warming up
+        _bk("e", "(never evaluated)", auto=True),
+    ], "candidates": [], "last_run": None}
+    thesis_data.synthesize(snap)
+    g = snap["groups"]
+    assert [b["id"] for b in g["fired"]] == ["a"]
+    assert [b["id"] for b in g["clear"]] == ["b"]
+    assert [b["id"] for b in g["awaiting"]] == ["c"]
+    assert {b["id"] for b in g["no_data"]} == {"d", "e"}
+
+
+def test_health_intact_when_none_fired():
+    snap = {"available": True, "breakers": [
+        _bk("b", "CLEAR"), _bk("c", "INSUFFICIENT_DATA", auto=False)],
+        "candidates": [], "last_run": None}
+    thesis_data.synthesize(snap)
+    assert snap["health"]["state"] == "INTACT"
+    # counts surfaced for the formatter's headline (i18n lives there)
+    assert (snap["health"]["fired"], snap["health"]["clear"],
+            snap["health"]["awaiting"]) == (0, 1, 1)
+
+
+def test_health_breached_when_fired():
+    snap = {"available": True, "breakers": [_bk("a", "FIRED")],
+            "candidates": [], "last_run": None}
+    thesis_data.synthesize(snap)
+    assert snap["health"]["state"] == "BREACHED"
+
+
+def test_synthesize_is_idempotent():
+    snap = {"available": True, "breakers": [_bk("b", "CLEAR")],
+            "candidates": [], "last_run": None}
+    thesis_data.synthesize(snap)
+    first = snap["health"]
+    thesis_data.synthesize(snap)
+    assert snap["health"] == first
+
+
+def test_catalysts_loaded_from_watcher_yaml(tmp_path):
+    base = _seed(tmp_path)
+    (base / "catalysts.yaml").write_text(
+        "catalysts:\n"
+        "  - date: '2099-01-15'\n    what: MEGACORP earnings\n"
+        "  - date: '2099-03-01'\n    what: CHIPCO earnings\n")
+    snap = thesis_data.load_snapshot(str(base))
+    assert [c["date"] for c in snap["catalysts"]] == ["2099-01-15", "2099-03-01"]
+    assert snap["next_catalyst"]["date"] == "2099-01-15"   # first future date
+
+
+def test_past_catalysts_not_next(tmp_path):
+    base = _seed(tmp_path)
+    (base / "catalysts.yaml").write_text(
+        "catalysts:\n"
+        "  - date: '2001-01-01'\n    what: long gone\n"
+        "  - date: '2099-03-01'\n    what: CHIPCO earnings\n")
+    snap = thesis_data.load_snapshot(str(base))
+    assert snap["next_catalyst"]["date"] == "2099-03-01"
+
+
+def test_missing_catalysts_file_is_empty_list(tmp_path):
+    snap = thesis_data.load_snapshot(str(_seed(tmp_path)))
+    assert snap["catalysts"] == [] and snap["next_catalyst"] is None

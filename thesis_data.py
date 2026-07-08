@@ -12,13 +12,63 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+from datetime import date
 
 log = logging.getLogger(__name__)
 
 
 def _empty() -> dict:
     return {"available": False, "breakers": [], "candidates": [],
-            "last_run": None}
+            "last_run": None, "catalysts": [], "next_catalyst": None}
+
+
+def synthesize(snap: dict) -> dict:
+    """Add the human layer on top of raw verdicts — pure and idempotent.
+
+    The raw snapshot answers "what does each detector return"; the pane
+    wants "is the thesis intact and what do I still owe it". Groups by
+    what matters: a manual breaker with no input is actionable
+    ("awaiting" a human observation), while an auto breaker without
+    enough data points is merely warming up.
+    """
+    fired, clear, awaiting, no_data = [], [], [], []
+    for b in snap.get("breakers", []):
+        v = b.get("verdict")
+        if v == "FIRED":
+            fired.append(b)
+        elif v == "CLEAR":
+            clear.append(b)
+        elif v == "INSUFFICIENT_DATA" and not b.get("auto", True):
+            awaiting.append(b)
+        else:
+            no_data.append(b)
+    snap["groups"] = {"fired": fired, "clear": clear,
+                      "awaiting": awaiting, "no_data": no_data}
+    snap["health"] = {
+        "state": "BREACHED" if fired else "INTACT",
+        "fired": len(fired), "clear": len(clear),
+        "awaiting": len(awaiting)}
+    return snap
+
+
+def _load_catalysts(base: str) -> list[dict]:
+    """Read the watcher-owned catalyst calendar (catalysts.yaml).
+
+    Calendar content is thesis material, so it lives with the watcher —
+    never in this (public) repo's source. Missing file → empty list.
+    """
+    path = os.path.join(base, "catalysts.yaml")
+    if not os.path.exists(path):
+        return []
+    try:
+        import yaml
+        with open(path, encoding="utf-8") as fh:
+            raw = yaml.safe_load(fh) or {}
+        return [{"date": str(c.get("date", "")), "what": str(c.get("what", ""))}
+                for c in raw.get("catalysts", []) if c.get("date")]
+    except (OSError, Exception) as e:
+        log.warning("catalysts unreadable: %s", e)
+        return []
 
 
 def load_snapshot(base_dir: str) -> dict:
@@ -83,4 +133,8 @@ def load_snapshot(base_dir: str) -> dict:
     out["candidates"] = [
         {"id": c[0], "breaker_id": c[1], "summary": c[2], "evidence": c[3],
          "url": c[4], "created_at": c[5]} for c in cands]
-    return out
+    out["catalysts"] = _load_catalysts(base)
+    today = date.today().isoformat()
+    out["next_catalyst"] = next(
+        (c for c in out["catalysts"] if c["date"] >= today), None)
+    return synthesize(out)

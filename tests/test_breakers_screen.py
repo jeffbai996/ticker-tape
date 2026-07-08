@@ -123,3 +123,42 @@ def test_age_uses_timezone_aware_now(monkeypatch):
     monkeypatch.setattr(breakers_mod, "datetime", _SpyDatetime)
     epoch = time.time() - 3600
     assert _age(epoch) == "1h ago"
+
+
+# ── synthesis layout: headline / groups / calendar ─────────────────────
+
+def test_headline_shows_intact_with_counts():
+    out = format_breakers(_snap(breakers=[
+        {"id": "rates_high", "verdict": "CLEAR", "category": "macro",
+         "severity": "trim", "reason": "", "auto": True, "swept": False}],
+        candidates=[]))
+    assert "INTACT" in out
+    assert "1" in out            # clear count in headline
+
+
+def test_headline_breached_when_fired():
+    out = format_breakers(_snap(candidates=[]))
+    assert "BREACHED" in out and "INTACT" not in out
+
+
+def test_awaiting_group_shows_manual_command_hint():
+    out = format_breakers(_snap(breakers=[
+        {"id": "capex_manual", "verdict": "INSUFFICIENT_DATA",
+         "category": "capex", "severity": "reunderwrite", "reason": "",
+         "auto": False, "swept": False}], candidates=[]))
+    assert "watcher.py manual capex_manual" in out
+
+
+def test_calendar_renders_dates_and_next():
+    out = format_breakers(_snap(candidates=[], catalysts=[
+        {"date": "2099-01-15", "what": "MEGACORP earnings"},
+        {"date": "2099-03-01", "what": "CHIPCO earnings"}],
+        next_catalyst={"date": "2099-01-15", "what": "MEGACORP earnings"}))
+    assert "2099-01-15" in out and "MEGACORP earnings" in out
+    assert "2099-03-01" in out
+
+
+def test_plain_snap_without_synthesis_keys_still_renders():
+    # formatter self-synthesizes — the raw load_snapshot dict is enough
+    out = format_breakers(_snap())
+    assert "FIRED" in out and "capex_cut" in out
