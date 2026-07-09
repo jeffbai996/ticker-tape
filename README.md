@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.5.0*
+*v3.7.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -35,6 +35,12 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 - **Morning Briefing** — `brief` assembles portfolio health, macro context (10 indicators including DXY, 10Y, BTC), watchlist movers, sector snapshot, news headlines per top mover, and upcoming earnings with EPS estimates. `brief ai` adds AI synthesis.
 - **Position Sizing** — `whatif [buy/sell] SYM QTY` runs an IBKR what-if with concentration and cushion analysis. Omit the direction to see the buy and sell legs side by side.
 - **Earnings Tracker** — `surprises` shows watchlist-wide EPS beat/miss history with persistence to SQLite.
+- **Backtest / Thesis Replay** — `bt [SYM] [ccy CAD|USD]` replays the fills ledger against a benchmark: equity curve with entry/exit marks, book vs buy-&-hold vs alpha, max drawdown. Mixed CAD/USD books normalize to one report currency at each date's FX rate. Seed the ledger from an IBKR Flex Query with `python flex_import.py <export.csv>` (the live execution API only reaches ~7 days back; Flex reaches years).
+- **Shadow books** — `shadows` replays standing counterfactual ledgers (`data/shadows/*.csv` — "never trimmed", "kept the hedge") through the same engine over the same bars, so the running dollar cost of every major decision stays visible.
+- **Time travel** — `tt [date]` freezes the terminal AS OF a past date: that day's closes, and positions/cost basis/P&L reconstructed from the fills ledger. `←`/`→` scrub by day, `Home` returns to live.
+- **Thesis breakers** — `breakers` / `tw` renders the external watcher's sell-discipline checklist: health headline, fired/holding grouping, catalyst calendar, rotation estimate. Read-only glass — the watcher owns the discipline.
+- **Decision cards** — a fired alert now attaches a pre-computed playbook (e.g. a trim ladder sized to restore a target margin cushion) so the next step is a decision, not a research task. `note` annotates fills with one-line thesis notes stored in a sidecar (survives ledger re-imports).
+- **Event tape** — bottom strip of recent trading events (alerts, movers, calendar); toggle with `Ctrl+E` or `events on/off`. Deduped ring buffer, pure data structure.
 
 ### Research & memos
 
@@ -63,6 +69,13 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 | **Sizing** | Pre-trade what-if: margin impact, concentration weight, cushion before/after |
 | **Briefing** | Morning briefing: portfolio health, macro (10 indicators incl. DXY/10Y/BTC), movers, sector snapshot, news headlines per top mover, earnings with EPS estimates |
 | **Archive** | Browse written analyze memos: slug list with counts/dates, per-slug numbered listing with conviction color + key claim, reopen view with front-matter banner |
+| **Cockpit** | Risk cockpit: traffic-lit verdict, per-position margin treatment (from SELL-all what-ifs), VaR/vol/beta/drawdown, survivability |
+| **Carry** | Cost of carry: margin interest vs dividend income, per-day $, % of NLV, breakeven return on the borrowed slice |
+| **Catalyst** | Forward per-symbol catalyst calendar (conferences, product/policy dates) merged with the macro econ calendar |
+| **Backtest** | Fills-ledger replay vs benchmark: equity curve with entry/exit marks, alpha, max DD, FX-normalized |
+| **Shadows** | Counterfactual ledgers vs the real book — the running cost of past decisions |
+| **Breakers** | Thesis-breaker checklist from the external watcher: health headline, grouping, catalyst calendar, rotation estimate |
+| **Time travel** | The whole terminal AS OF a past date, ←/→ day scrubbing, ledger-reconstructed book |
 
 ## AI Chat
 
@@ -253,6 +266,9 @@ Write tools (`set_alert`, `memory_add`, deletes) validate and normalize argument
 | `Ctrl+N` | Chat | New line in input |
 | `c` | Ticker | Toggle compact mode |
 | `l` | Ticker | Switch language (en/zh) |
+| `Ctrl+E` | Ticker | Toggle bottom event tape |
+| `←` / `→` | Time travel | Scrub one day back / forward |
+| `Home` | Time travel | Return to live |
 
 ## Deep-Dive Analysis
 
@@ -341,7 +357,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
 - `pyyaml` — Analyze memo front-matter serialization
-- `pytest` — 941 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar
+- `pytest` — 1158 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar, backtest engine + FX layer + Flex import, time travel, event feed, decision cards, fill notes, shadow books, breakers
 
 ## Demo
 
@@ -357,6 +373,10 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.7.0** (2026-07-07) — **Decision surfaces: breakers, time travel, event tape, decision cards, shadow books.** Five features that turn the terminal from a data display into a decision instrument. **Breakers** (`tw`): read-only glass over the external breaker watcher — health headline (INTACT/BREACHED), fired/holding grouping, catalyst calendar, rotation estimate, per-breaker qtr coverage badges; the watcher owns the discipline, the terminal renders it. **Time travel** (`tt [date]`): the whole terminal AS OF a past date — that day's closes, book reconstructed from the fills ledger via the backtest engine's `PositionBook` (same matched-sell/average-cost semantics), `←`/`→` day scrubbing, `Home` = live. **Event tape** (`Ctrl+E`): a bottom strip of recent trading events (alerts, movers, calendar) on a deduped ring buffer. **Decision cards**: a fired alert attaches a pre-computed playbook — e.g. a trim ladder sized from live IBKR state to restore a target cushion — plus `note`, one-line thesis annotations on fills stored in a sidecar that survives ledger re-imports. **Shadow books** (`shadows`): standing counterfactual ledgers (`data/shadows/*.csv`) replayed through the same engine over the same bars, making the running dollar cost of past decisions a first-class view. Also: backtest data-quality hardening (split detection in the ledger window, raw unadjusted closes, deduped FX caveats).
+
+**v3.6.0** (2026-07-07) — **Backtest / thesis replay (`bt`).** Replays the book's realized fills against a benchmark: ASCII equity curve with entry/exit marks, book vs buy-&-hold return vs alpha, max drawdown. Fills come from a local CSV ledger (`data/fills.csv`) because IBKR's execution API only reaches ~7 days back; `flex_import.py` converts a multi-year IBKR Flex-Query export into the ledger in one command (column aliases, signed-qty side inference, CAD-listing suffixes). Mixed CAD/USD books are normalized to one report currency (`bt [SYM] ccy CAD|USD`, default `config.BACKTEST_CCY`) with each amount converted at its own date's USDCAD rate — never today's, never a fabricated parity rate. Pure engine (`backtest.py`), data layer (`backtest_data.py`), FX layer (`backtest_fx.py`), all unit-tested; demo-seeded.
 
 **v3.5.0** (2026-07-02) — **Catalyst calendar (`catalyst` / `cx`).** A forward calendar of per-symbol events beyond earnings — conferences (GTC, OFC), product launches, policy/export-control dates, supply cycles, capex days — the catalysts a thesis turns on that no earnings feed carries. Catalysts persist in a JSON store and the view merges them with the macro econ calendar (FOMC/CPI/NFP/GDP/PCE) into one date-sorted, countdown-colored list; `catalyst SYM` filters to one name. AI chat maintains it via two new write tools (`add_catalyst`, `list_catalysts`), so you can say "add NVDA's GTC keynote on March 17" mid-conversation. Pure formatter (`catalyst.py`), bilingual, demo-seeded.
 
