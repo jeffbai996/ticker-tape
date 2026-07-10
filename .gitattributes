@@ -1,97 +1,22 @@
-# All substantive source — encrypted via git-crypt
-# Only scaffolding left plaintext: README, LICENSE, requirements.txt, .gitignore, assets/, empty __init__.py
+# All substantive source — encrypted via git-crypt.
+#
+# POLICY (enforced by blanket globs, last match wins):
+#   Every *.py and *.tcss file is encrypted AUTOMATICALLY — new modules,
+#   screens, widgets, and tests need no entry here. Do not list source files
+#   individually; that pattern silently drifted (30+ files fell out of the
+#   filter between 2026-06 and 2026-07). Only add lines below to make
+#   something PUBLIC, never to make something encrypted.
+#   Plaintext scaffolding: README, LICENSE, requirements.txt, pyproject.toml,
+#   .gitignore, assets/, data/demo/**, the `tape` launcher.
 
-# ── Core ──
-app.py filter=git-crypt diff=git-crypt
-app.tcss filter=git-crypt diff=git-crypt
-config.py filter=git-crypt diff=git-crypt
-data.py filter=git-crypt diff=git-crypt
-chat.py filter=git-crypt diff=git-crypt
-chat_tools.py filter=git-crypt diff=git-crypt
-formatters.py filter=git-crypt diff=git-crypt
-i18n.py filter=git-crypt diff=git-crypt
-ibkr_client.py filter=git-crypt diff=git-crypt
-memory.py filter=git-crypt diff=git-crypt
-econ_calendar.py filter=git-crypt diff=git-crypt
-analyze.py filter=git-crypt diff=git-crypt
-archive.py filter=git-crypt diff=git-crypt
-pricing.py filter=git-crypt diff=git-crypt
-demo_data.py filter=git-crypt diff=git-crypt
-vecgrep_client.py filter=git-crypt diff=git-crypt
-catalyst.py filter=git-crypt diff=git-crypt
+# ── Blanket rules: all source encrypted ──
+*.py filter=git-crypt diff=git-crypt
+*.tcss filter=git-crypt diff=git-crypt
 
-# ── Demo seed data (public showcase — explicitly plaintext) ──
-data/demo/** !filter !diff
-
-# ── Docs (reveals features/architecture) ──
+# ── Docs that reveal features/architecture/thesis ──
 USER_GUIDE.md filter=git-crypt diff=git-crypt
-
-# ── Screens ──
-screens/alerts.py filter=git-crypt diff=git-crypt
-screens/calendar_screen.py filter=git-crypt diff=git-crypt
-screens/chart.py filter=git-crypt diff=git-crypt
-screens/chat_screen.py filter=git-crypt diff=git-crypt
-screens/comparison.py filter=git-crypt diff=git-crypt
-screens/earnings.py filter=git-crypt diff=git-crypt
-screens/heatmap.py filter=git-crypt diff=git-crypt
-screens/help.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen/__init__.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen/_shared.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen/positions.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen/account.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen/margin_dashboard.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen/whatif.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen/consolidated.py filter=git-crypt diff=git-crypt
-screens/ibkr_screen/detail.py filter=git-crypt diff=git-crypt
-screens/impact.py filter=git-crypt diff=git-crypt
-screens/insider.py filter=git-crypt diff=git-crypt
-screens/intraday.py filter=git-crypt diff=git-crypt
-screens/lookup.py filter=git-crypt diff=git-crypt
-screens/market.py filter=git-crypt diff=git-crypt
-screens/news.py filter=git-crypt diff=git-crypt
-screens/sectors.py filter=git-crypt diff=git-crypt
-screens/technicals.py filter=git-crypt diff=git-crypt
-screens/thesis.py filter=git-crypt diff=git-crypt
-screens/valuation.py filter=git-crypt diff=git-crypt
-screens/watchlist_screen.py filter=git-crypt diff=git-crypt
-screens/cockpit.py filter=git-crypt diff=git-crypt
-screens/carry.py filter=git-crypt diff=git-crypt
-
-# ── Widgets ──
-widgets/command_bar.py filter=git-crypt diff=git-crypt
-widgets/sidebar.py filter=git-crypt diff=git-crypt
-widgets/status_bar.py filter=git-crypt diff=git-crypt
-widgets/ticker_tape.py filter=git-crypt diff=git-crypt
-
-# ── Tests (reveal internal contracts) ──
-tests/conftest.py filter=git-crypt diff=git-crypt
-tests/test_app.py filter=git-crypt diff=git-crypt
-tests/test_chat.py filter=git-crypt diff=git-crypt
-tests/test_chat_screen.py filter=git-crypt diff=git-crypt
-tests/test_command_bar.py filter=git-crypt diff=git-crypt
-tests/test_data.py filter=git-crypt diff=git-crypt
-tests/test_data_fetch.py filter=git-crypt diff=git-crypt
-tests/test_econ_calendar.py filter=git-crypt diff=git-crypt
-tests/test_formatters.py filter=git-crypt diff=git-crypt
-tests/test_i18n.py filter=git-crypt diff=git-crypt
-tests/test_ibkr_client.py filter=git-crypt diff=git-crypt
-tests/test_memory.py filter=git-crypt diff=git-crypt
-tests/test_screens.py filter=git-crypt diff=git-crypt
-tests/test_sidebar.py filter=git-crypt diff=git-crypt
-tests/test_status_bar.py filter=git-crypt diff=git-crypt
-tests/test_thesis.py filter=git-crypt diff=git-crypt
-tests/test_analyze.py filter=git-crypt diff=git-crypt
-tests/test_archive.py filter=git-crypt diff=git-crypt
-tests/test_pricing.py filter=git-crypt diff=git-crypt
-tests/test_chat_tools.py filter=git-crypt diff=git-crypt
-tests/test_cockpit.py filter=git-crypt diff=git-crypt
-tests/test_carry.py filter=git-crypt diff=git-crypt
-tests/test_vecgrep_client.py filter=git-crypt diff=git-crypt
-tests/test_catalyst.py filter=git-crypt diff=git-crypt
-
-# ── Superpowers docs (spec/plan reveal architecture + thesis) ──
+ROADMAP.md filter=git-crypt diff=git-crypt
 docs/superpowers/** filter=git-crypt diff=git-crypt
-tests/test_lookup.py filter=git-crypt diff=git-crypt
-tests/test_demo.py filter=git-crypt diff=git-crypt
-tests/test_retry.py filter=git-crypt diff=git-crypt
-tests/test_exception_guard.py filter=git-crypt diff=git-crypt
+
+# ── Public scaffolding exceptions (plaintext) ──
+data/demo/** !filter !diff
