@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.7.0*
+*v3.7.1*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -79,7 +79,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ## AI Chat
 
-Eight models across three providers — switch mid-conversation with `model`.
+Ten models across three providers — switch mid-conversation with `model`.
 
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
@@ -89,8 +89,10 @@ Eight models across three providers — switch mid-conversation with `model`.
 | Sonnet 5 | Anthropic | adaptive | 1M | Balanced |
 | Opus 4.8 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
 | Fable 5 | Anthropic | adaptive | 1M | Most capable — top reasoning |
-| GPT-5.5 | OpenAI | medium | 120K | Full GPT |
-| GPT-5.4 mini | OpenAI | low | 120K | Fast GPT |
+| GPT-5.6 Sol | OpenAI | low | 120K | Flagship GPT — low effort (already plenty for chat) |
+| GPT-5.6 Terra | OpenAI | high | 120K | Balanced GPT, cranked effort |
+| GPT-5.6 Luna | OpenAI | high | 120K | Fast, cheapest GPT, cranked effort |
+| GPT-5.5 | OpenAI | medium | 120K | Prior flagship |
 
 ```
 ticker> model
@@ -107,8 +109,10 @@ Type 'model' to list, 'model <name>' to switch.
     opus         Opus 4.8                  claude-opus-4-8                ✓
     fable        Fable 5                   claude-fable-5                 ✓
   ── GPT ──
-    gpt          GPT-5.5                   gpt-5.5                        ✓
-    gpt-mini     GPT-5.4 mini              gpt-5.4-mini                   ✓
+    sol          GPT-5.6 Sol               gpt-5.6-sol                    ✓
+    terra        GPT-5.6 Terra             gpt-5.6-terra                  ✓
+    luna         GPT-5.6 Luna              gpt-5.6-luna                   ✓
+    5.5          GPT-5.5                   gpt-5.5                        ✓
 ```
 
 ### Context System
@@ -123,11 +127,11 @@ The AI assistant has a layered context system — it knows who you are, what the
 
 ### Image Input
 
-Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all eight models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual. Hard cap at 2 MB per image (override with `TICKERTAPE_MAX_IMAGE_BYTES`); oversize images get rejected with a notify, since image tokens add up fast — a 4K screenshot can cost ~16K input tokens *per turn the conversation references it*.
+Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all ten models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual. Hard cap at 2 MB per image (override with `TICKERTAPE_MAX_IMAGE_BYTES`); oversize images get rejected with a notify, since image tokens add up fast — a 4K screenshot can cost ~16K input tokens *per turn the conversation references it*.
 
 ### Memory
 
-Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all eight models share the same knowledge base.
+Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all ten models share the same knowledge base.
 
 **Three ways to save:** `memory add <text>` from the command bar, `remember <text>` while in chat mode (direct, no API call), or just tell the AI conversationally — "remember that AAPL reports Jan 30" — and it saves automatically.
 
@@ -176,7 +180,7 @@ history 2 · peek N · search <term> · delete N[-M] · compact · clear
 
 ### Chain-of-Thought, Search & Token Usage
 
-Models with thinking budgets or reasoning effort (Gemini Flash, Gemini Pro, Claude Sonnet, Claude Opus, GPT-5.5, GPT-5.4 mini) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
+Models with thinking budgets or reasoning effort (Gemini Flash, Gemini Pro, Claude Sonnet, Claude Opus, and the GPT-5.6 tiers + GPT-5.5) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
 
 **Native web search** fires automatically when a model needs current information. Each provider uses its own search: Claude uses `web_search`, Gemini uses Google Search with grounding metadata, GPT uses the Responses API `web_search`. Search indicators appear inline during thinking. Citation markers are stripped from final output.
 
@@ -225,7 +229,7 @@ Mentioning a watchlist ticker in chat automatically fetches its recent headlines
 
 ### Agent Tools
 
-The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "set an alert when NVDA crosses 200" and it calls `set_alert` — the alert lands in the same store the `alert` command uses. "What did my last AAPL memo say" searches the analyze archive. 19 tools across all eight models.
+The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "set an alert when NVDA crosses 200" and it calls `set_alert` — the alert lands in the same store the `alert` command uses. "What did my last AAPL memo say" searches the analyze archive. 19 tools across all ten models.
 
 | Tool | What It Does |
 |------|--------------|
@@ -373,6 +377,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.7.1** (2026-07-10) — **GPT-5.6 tiers.** Swapped the two GPT slots for the GPT-5.6 lineup: **Sol** (flagship), **Terra** (balanced), **Luna** (fast/cheapest), plus the prior flagship **5.5** kept. Removed GPT-5.4 mini. The registry keys *are* the switch names — `model sol|terra|luna|5.5`. Effort is inverted vs tier: Sol runs `low` (the flagship is already overkill for a chatbot — save the tokens), Terra/Luna run `high` to make the cheaper tiers punch up; 5.5 stays `medium`. Ten models now; the cost breakdown folds all four GPT tiers into one entry by provider, so it needed no change. Pricing per 1M tokens: Sol $5/$30, Terra $2.50/$15, Luna $1/$6, 5.5 $5/$30.
 
 **v3.7.0** (2026-07-07) — **Decision surfaces: breakers, time travel, event tape, decision cards, shadow books.** Five features that turn the terminal from a data display into a decision instrument. **Breakers** (`tw`): read-only glass over the external breaker watcher — health headline (INTACT/BREACHED), fired/holding grouping, catalyst calendar, rotation estimate, per-breaker qtr coverage badges; the watcher owns the discipline, the terminal renders it. **Time travel** (`tt [date]`): the whole terminal AS OF a past date — that day's closes, book reconstructed from the fills ledger via the backtest engine's `PositionBook` (same matched-sell/average-cost semantics), `←`/`→` day scrubbing, `Home` = live. **Event tape** (`Ctrl+E`): a bottom strip of recent trading events (alerts, movers, calendar) on a deduped ring buffer. **Decision cards**: a fired alert attaches a pre-computed playbook — e.g. a trim ladder sized from live IBKR state to restore a target cushion — plus `note`, one-line thesis annotations on fills stored in a sidecar that survives ledger re-imports. **Shadow books** (`shadows`): standing counterfactual ledgers (`data/shadows/*.csv`) replayed through the same engine over the same bars, making the running dollar cost of past decisions a first-class view. Also: backtest data-quality hardening (split detection in the ledger window, raw unadjusted closes, deduped FX caveats).
 
