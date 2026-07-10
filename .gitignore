@@ -40,3 +40,7 @@ data/fill_notes.json
 
 # User shadow ledgers (local counterfactuals)
 data/shadows/*.csv
+
+# Local Claude context — never publish (public repo)
+CLAUDE.local.md
+CLAUDE.md
