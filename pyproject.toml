@@ -82,6 +82,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
 markers = ["allow_network: permit real network access in this test"]
+# Belt for the conftest network guard: C-level networking (libcurl) can slip
+# past the socket patch and hang instead of failing — cap every test.
+timeout = 120
 
 [tool.coverage.run]
 omit = ["venv/*", "tests/*"]
