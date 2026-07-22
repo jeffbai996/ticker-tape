@@ -1827,7 +1827,7 @@ wheels = [
 
 [[package]]
 name = "ticker-tape"
-version = "3.7.2"
+version = "3.7.3"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
