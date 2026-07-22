@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.7.1*
+*v3.7.2*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -14,7 +14,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ### Performance
 
-- **Refresh** — 30-second quote cycle, parallel sparkline fetches (6 workers); quotes display before charts load.
+- **Refresh** — 15-second quote cycle, parallel sparkline fetches (6 workers); quotes display before charts load.
 - **Cache** — 10s TTL on `.info` calls, 120s on technicals, 60s on benchmark history. Eliminates redundant yfinance requests across sidebar, thesis, and lookup views.
 
 ### Display
@@ -361,7 +361,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
 - `pyyaml` — Analyze memo front-matter serialization
-- `pytest` — 1158 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar, backtest engine + FX layer + Flex import, time travel, event feed, decision cards, fill notes, shadow books, breakers
+- `pytest` — 1192 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar, backtest engine + FX layer + Flex import, time travel, event feed, decision cards, fill notes, shadow books, breakers
 
 ## Demo
 
@@ -377,6 +377,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.7.2** (2026-07-22) — **Correctness hardening.** Backtest return, alpha, and drawdown calculations now remove later capital contributions instead of reporting deposits as gains; the benchmark receives the same dated cash flows. Shadow books retain ledger currency metadata and normalize every fill and bar into the configured report currency before comparison. Earnings reactions now distinguish before-market from after-market reports, include already-reported same-day BMO events, and refresh existing SQLite rows when corrected reaction data arrives.
 
 **v3.7.1** (2026-07-10) — **GPT-5.6 tiers.** Swapped the two GPT slots for the GPT-5.6 lineup: **Sol** (flagship), **Terra** (balanced), **Luna** (fast/cheapest), plus the prior flagship **5.5** kept. Removed GPT-5.4 mini. The registry keys *are* the switch names — `model sol|terra|luna|5.5`. Effort is inverted vs tier: Sol runs `low` (the flagship is already overkill for a chatbot — save the tokens), Terra/Luna run `high` to make the cheaper tiers punch up; 5.5 stays `medium`. Ten models now; the cost breakdown folds all four GPT tiers into one entry by provider, so it needed no change. Pricing per 1M tokens: Sol $5/$30, Terra $2.50/$15, Luna $1/$6, 5.5 $5/$30.
 
