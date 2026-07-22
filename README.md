@@ -361,7 +361,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
 - `pyyaml` — Analyze memo front-matter serialization
-- `pytest` — 1193 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar, backtest engine + FX layer + Flex import, time travel, event feed, decision cards, fill notes, shadow books, breakers
+- `pytest` — 1195 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar, backtest engine + FX layer + Flex import, time travel, event feed, decision cards, fill notes, shadow books, breakers
 
 ## Demo
 
@@ -378,7 +378,7 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 
 ## Changelog
 
-**v3.7.3** (2026-07-22) — **Compact banner persistence.** The final compact-thesis refresh now restores the startup banner after clearing the interim render, preserving the MacBook regression fix across the app-mixin refactor.
+**v3.7.3** (2026-07-22) — **Compact banner persistence.** The final compact-thesis refresh now restores the startup banner after clearing the interim render, preserving the MacBook regression fix across the app-mixin refactor. The headless CLI banner and command headings now resolve and display the same release version as the TUI.
 
 **v3.7.2** (2026-07-22) — **Correctness hardening.** Backtest return, alpha, and drawdown calculations now remove later capital contributions instead of reporting deposits as gains; the benchmark receives the same dated cash flows. Shadow books retain ledger currency metadata and normalize every fill and bar into the configured report currency before comparison. Earnings reactions now distinguish before-market from after-market reports, include already-reported same-day BMO events, and refresh existing SQLite rows when corrected reaction data arrives.
 
