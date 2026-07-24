@@ -84,7 +84,7 @@ Ten models across three providers — switch mid-conversation with `model`.
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
 | Gemini Flash | Google | 1,024 | 900K | Fast answers, cheapest |
-| Flash 3.5 | Google | 1,024 | 900K | Newer fast Gemini |
+| Flash 3.6 | Google | 1,024 | 900K | Newer fast Gemini |
 | Gemini Pro | Google | 2,048 | 900K | Deep analysis |
 | Sonnet 5 | Anthropic | adaptive | 1M | Balanced |
 | Opus 5 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
@@ -102,7 +102,7 @@ Type 'model' to list, 'model <name>' to switch.
 
   ── GEMINI ──
   ◆ flash        Gemini Flash              gemini-3-flash-preview         ✓
-    flash+       Flash 3.5                 gemini-3.5-flash               ✓
+    flash+       Flash 3.6                 gemini-3.6-flash               ✓
     pro          Gemini Pro                gemini-3.1-pro-preview         ✓
   ── CLAUDE ──
     sonnet       Sonnet 5                  claude-sonnet-5                ✓
