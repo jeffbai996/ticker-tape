@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.7.3*
+*v3.9.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -375,6 +375,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v3.9.0** (2026-08-11) — **The wire release.** The fragwire panel catches up to the server: cross-outlet story clustering with ×N badges and `wire story N` to unpack members, source-credibility pips, plain-English publication bylines, `wire read N` on-demand article extraction, long-form morning-brief rendering with CJK-aware wrapping, and Chinese output across the whole wire surface (headlines, statuses, health — the last locale leak). Alerts gain in-place editing (`alert edit`) with a persisted FIRED state; the watchlist drops its forced alphabetical sort in favour of user order with `wl up/down/move` and a one-line breadth summary. Startup quotes now come from one batched request instead of a per-symbol trickle. The economic calendar carries the full 2027 schedule plus derived quad-witching dates, guarded by a test that fails 60 days before the calendar runs dry. Lookup adds a company Profile block and a stale-quote badge.
 
 **v3.7.3** (2026-07-22) — **Compact banner persistence.** The final compact-thesis refresh now restores the startup banner after clearing the interim render, preserving the MacBook regression fix across the app-mixin refactor. The headless CLI banner and command headings now resolve and display the same release version as the TUI.
 
