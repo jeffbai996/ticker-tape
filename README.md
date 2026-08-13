@@ -83,7 +83,7 @@ Nine models across three providers — switch mid-conversation with `model`.
 
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
-| Flash 3.6 | Google | 1,024 | 900K | Fast answers, cheapest |
+| Flash 3.7 | Google | 1,024 | 900K | Fast answers, cheapest |
 | Gemini Pro | Google | 2,048 | 900K | Deep analysis |
 | Sonnet 5 | Anthropic | adaptive | 1M | Balanced |
 | Opus 5 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
@@ -100,7 +100,7 @@ ticker> model
 Type 'model' to list, 'model <name>' to switch.
 
   ── GEMINI ──
-  ◆ flash        Flash 3.6                 gemini-3.6-flash               ✓
+  ◆ flash        Flash 3.7                 gemini-3.7-flash               ✓
     pro          Gemini Pro                gemini-3.1-pro-preview         ✓
   ── CLAUDE ──
     sonnet       Sonnet 5                  claude-sonnet-5                ✓
@@ -137,7 +137,7 @@ Memories are persistent facts that survive across sessions, model switches, and 
 
 **Deleting works the same way** — `memory delete 5` from the command bar, or tell the AI "forget memory 5" in conversation.
 
-**Compaction** — `memory compact` sends all stored memories through Flash 3.6, which distills them into a smaller set of consolidated facts. Useful when you've built up 20+ memories and want to keep the signal without the noise.
+**Compaction** — `memory compact` sends all stored memories through Flash 3.7, which distills them into a smaller set of consolidated facts. Useful when you've built up 20+ memories and want to keep the signal without the noise.
 
 ```
 ticker> memory
@@ -174,11 +174,11 @@ history 2 · peek N · search <term> · delete N[-M] · compact · clear
 
 `history search <term>` finds old conversations. `history delete 3` removes a single exchange. `history delete 6-10` removes a range.
 
-**Compaction** — `history compact` sends the full history through Flash 3.6, which produces a concise summary. The original messages are replaced with a single summary entry. The AI retains the knowledge without burning tokens re-reading 50 old exchanges.
+**Compaction** — `history compact` sends the full history through Flash 3.7, which produces a concise summary. The original messages are replaced with a single summary entry. The AI retains the knowledge without burning tokens re-reading 50 old exchanges.
 
 ### Chain-of-Thought, Search & Token Usage
 
-Models with thinking budgets or reasoning effort (Flash 3.6, Gemini Pro, Claude Sonnet, Claude Opus, and the GPT-5.6 tiers + GPT-5.5) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
+Models with thinking budgets or reasoning effort (Flash 3.7, Gemini Pro, Claude Sonnet, Claude Opus, and the GPT-5.6 tiers + GPT-5.5) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
 
 **Native web search** fires automatically when a model needs current information. Each provider uses its own search: Claude uses `web_search`, Gemini uses Google Search with grounding metadata, GPT uses the Responses API `web_search`. Search indicators appear inline during thinking. Citation markers are stripped from final output.
 
