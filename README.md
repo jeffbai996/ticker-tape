@@ -87,7 +87,7 @@ Nine models across three providers — switch mid-conversation with `model`.
 | Gemini Pro | Google | 2,048 | 900K | Deep analysis |
 | Sonnet 5 | Anthropic | adaptive | 1M | Balanced |
 | Opus 5 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
-| Fable 5 | Anthropic | adaptive | 1M | Most capable — top reasoning |
+| Fable 5.1 | Anthropic | adaptive | 1M | Most capable — top reasoning |
 | GPT-5.6 Sol | OpenAI | low | 120K | Flagship GPT — low effort (already plenty for chat) |
 | GPT-5.6 Terra | OpenAI | high | 120K | Balanced GPT, cranked effort |
 | GPT-5.6 Luna | OpenAI | high | 120K | Fast, cheapest GPT, cranked effort |
@@ -105,7 +105,7 @@ Type 'model' to list, 'model <name>' to switch.
   ── CLAUDE ──
     sonnet       Sonnet 5                  claude-sonnet-5                ✓
     opus         Opus 5                    claude-opus-5                  ✓
-    fable        Fable 5                   claude-fable-5                 ✓
+    fable        Fable 5.1                 claude-fable-5-1               ✓
   ── GPT ──
     sol          GPT-5.6 Sol               gpt-5.6-sol                    ✓
     terra        GPT-5.6 Terra             gpt-5.6-terra                  ✓
