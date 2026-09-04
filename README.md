@@ -91,7 +91,7 @@ Nine models across three providers — switch mid-conversation with `model`.
 | GPT-5.6 Sol | OpenAI | low | 120K | Flagship GPT — low effort (already plenty for chat) |
 | GPT-5.6 Terra | OpenAI | high | 120K | Balanced GPT, cranked effort |
 | GPT-5.6 Luna | OpenAI | high | 120K | Fast, cheapest GPT, cranked effort |
-| GPT-5.5 | OpenAI | medium | 120K | Prior flagship |
+| GPT-6 Astra | OpenAI | medium | 120K | Most capable GPT |
 
 ```
 ticker> model
@@ -110,7 +110,7 @@ Type 'model' to list, 'model <name>' to switch.
     sol          GPT-5.6 Sol               gpt-5.6-sol                    ✓
     terra        GPT-5.6 Terra             gpt-5.6-terra                  ✓
     luna         GPT-5.6 Luna              gpt-5.6-luna                   ✓
-    5.5          GPT-5.5                   gpt-5.5                        ✓
+    astra        GPT-6 Astra               gpt-6-astra                    ✓
 ```
 
 ### Context System
