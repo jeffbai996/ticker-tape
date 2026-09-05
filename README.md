@@ -461,12 +461,16 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </details>
 
 
-### Continuous integration for encrypted source
+### Local validation
 
-Pushes and same-repository pull requests run the full pytest suite, build a
-wheel, then install and import it in a fresh environment. Provision the
-repository Actions secret `GIT_CRYPT_KEY_BASE64` from the authorized source key
-before enabling the workflow; a missing key fails explicitly. Fork PRs never
-receive the decryption key and require a trusted internal validation branch.
-The unlock key is removed before any project tests execute. Existing local PII
-and secret guards remain mandatory; CI does not replace their source scan.
+Run validation from an unlocked checkout before merging:
+
+```sh
+venv/bin/python -m pytest tests -q
+venv/bin/python -m pip wheel --no-deps --wheel-dir dist .
+```
+
+Verify the built wheel in a separate virtual environment, including runtime
+imports and the packaged stylesheet. Source decryption stays on trusted local
+machines; this repository does not require a GitHub Actions decryption secret.
+Existing local PII and secret guards remain mandatory.
