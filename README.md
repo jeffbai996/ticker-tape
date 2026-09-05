@@ -359,7 +359,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
 - `pyyaml` — Analyze memo front-matter serialization
-- `pytest` — 1195 tests covering data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar, backtest engine + FX layer + Flex import, time travel, event feed, decision cards, fill notes, shadow books, breakers
+- `pytest` — run `python -m pytest --collect-only -q` for the current count; coverage includes data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar, backtest engine + FX layer + Flex import, time travel, event feed, decision cards, fill notes, shadow books, breakers
 
 ## Demo
 
@@ -459,3 +459,14 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 
 **v0.1** (2026-02-19) — Project scaffolding. Textual app shell. yfinance data layer with TTL caching. Rich markup formatters.
 </details>
+
+
+### Continuous integration for encrypted source
+
+Pushes and same-repository pull requests run the full pytest suite, build a
+wheel, then install and import it in a fresh environment. Provision the
+repository Actions secret `GIT_CRYPT_KEY_BASE64` from the authorized source key
+before enabling the workflow; a missing key fails explicitly. Fork PRs never
+receive the decryption key and require a trusted internal validation branch.
+The unlock key is removed before any project tests execute. Existing local PII
+and secret guards remain mandatory; CI does not replace their source scan.
