@@ -103,6 +103,7 @@ py-modules = [
     "i18n",
     "ibkr_client",
     "journal",
+    "layout",
     "json_store",
     "memory",
     "options_intel",
