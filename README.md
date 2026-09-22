@@ -93,9 +93,9 @@ Nine models across three providers — switch mid-conversation with `model`.
 | Sonnet 5 | Anthropic | adaptive | 1M | Balanced |
 | Opus 5 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
 | Fable 5.1 | Anthropic | adaptive | 1M | Most capable — top reasoning |
-| GPT-5.6 Sol | OpenAI | low | 120K | Flagship GPT — low effort (already plenty for chat) |
+| GPT-6 Sol | OpenAI | low | 120K | Flagship GPT — low effort (already plenty for chat) |
 | GPT-5.6 Terra | OpenAI | high | 120K | Balanced GPT, cranked effort |
-| GPT-5.6 Luna | OpenAI | high | 120K | Fast, cheapest GPT, cranked effort |
+| GPT-6 Luna | OpenAI | high | 120K | Fast, cheapest GPT, cranked effort |
 | GPT-6 Astra | OpenAI | medium | 120K | Most capable GPT |
 
 ```
@@ -112,9 +112,9 @@ Type 'model' to list, 'model <name>' to switch.
     opus         Opus 5                    claude-opus-5                  ✓
     fable        Fable 5.1                 claude-fable-5-1               ✓
   ── GPT ──
-    sol          GPT-5.6 Sol               gpt-5.6-sol                    ✓
+    sol          GPT-6 Sol                 gpt-6-sol                      ✓
     terra        GPT-5.6 Terra             gpt-5.6-terra                  ✓
-    luna         GPT-5.6 Luna              gpt-5.6-luna                   ✓
+    luna         GPT-6 Luna                gpt-6-luna                     ✓
     astra        GPT-6 Astra               gpt-6-astra                    ✓
 ```
 
@@ -183,7 +183,7 @@ history 2 · peek N · search <term> · delete N[-M] · compact · clear
 
 ### Chain-of-Thought, Search & Token Usage
 
-Models with thinking budgets or reasoning effort (Flash 3.8, Gemini Pro, Claude Sonnet, Claude Opus, and the GPT-5.6 tiers + GPT-5.5) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
+Models with thinking budgets or reasoning effort (Flash 3.8, Gemini Pro, Claude Sonnet, Claude Opus, and the GPT tiers) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
 
 **Native web search** fires automatically when a model needs current information. Each provider uses its own search: Claude uses `web_search`, Gemini uses Google Search with grounding metadata, GPT uses the Responses API `web_search`. Search indicators appear inline during thinking. Citation markers are stripped from final output.
 
