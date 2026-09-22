@@ -99,6 +99,7 @@ py-modules = [
     "fill_notes",
     "flex_import",
     "formatters",
+    "freshness",
     "i18n",
     "ibkr_client",
     "journal",
