@@ -95,6 +95,7 @@ py-modules = [
     "demo_data",
     "econ_calendar",
     "event_feed",
+    "event_workspace",
     "fill_notes",
     "flex_import",
     "formatters",
