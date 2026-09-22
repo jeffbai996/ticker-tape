@@ -106,6 +106,7 @@ py-modules = [
     "options_intel",
     "pricing",
     "shadows",
+    "signals",
     "thesis_data",
     "timetravel",
     "vecgrep_client",
