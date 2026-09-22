@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v3.9.0*
+*v4.0.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -59,7 +59,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 | **Earnings** | Calendar with countdown, EPS estimates from yfinance calendar dict |
 | **Economic** | FOMC, CPI, NFP, GDP, PCE dates with urgency coloring |
 | **Insider** | Recent insider transactions with type/value/shares |
-| **Options** | Options chain with IV, greeks, ATM/ITM/OTM tagging, moneyness filtering, expiration picker |
+| **Options** | Options chain with IV, ATM/ITM/OTM tagging, moneyness filtering, expiration picker. A priced strip above the chain: ATM-straddle expected move (±$ / ±%) against the typical realised print with a rich/cheap verdict, ATM IV, 25-delta put/call skew, IV term structure across the nearest expiries, and volume/OI outliers |
 | **Correlation** | NxN correlation matrix across watchlist, color-coded by strength, avg pairwise metric |
 | **Comparison** | Side-by-side multi-symbol performance comparison |
 | **Screening** | Quick multi-symbol comparison table for filtering ideas |
@@ -375,6 +375,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v4.0.0** (2026-09-22) — **Web parity.** The analyst reads built and proven on ticker-tape-web come home. `opt SYM` now leads with what the market is pricing: the ATM-straddle expected move in dollars and percent, measured against the name's typical realised earnings reaction for a rich/fair/cheap verdict, plus ATM IV, 25-delta skew from Black-Scholes deltas on each contract's own IV, the IV term structure across the nearest four expiries, and volume-over-open-interest outliers with the number that made them unusual. All of it is pure functions over the chain shape the data layer already returns.
 
 **v3.9.0** (2026-08-11) — **The wire release.** The fragwire panel catches up to the server: cross-outlet story clustering with ×N badges and `wire story N` to unpack members, source-credibility pips, plain-English publication bylines, `wire read N` on-demand article extraction, long-form morning-brief rendering with CJK-aware wrapping, and Chinese output across the whole wire surface (headlines, statuses, health — the last locale leak). Alerts gain in-place editing (`alert edit`) with a persisted FIRED state; the watchlist drops its forced alphabetical sort in favour of user order with `wl up/down/move` and a one-line breadth summary. Startup quotes now come from one batched request instead of a per-symbol trickle. The economic calendar carries the full 2027 schedule plus derived quad-witching dates, guarded by a test that fails 60 days before the calendar runs dry. Lookup adds a company Profile block and a stale-quote badge.
 
