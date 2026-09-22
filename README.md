@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v4.1.0*
+*v4.2.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -380,6 +380,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v4.2.0** (2026-09-22) — **The July roadmap.** `layout` decides which sidebar sections show and in what order (`layout pulse calendar pnl risk`, `layout add earnings`, `layout rm risk`, `layout reset`), persisted, with two new ambient sections: a **calendar** countdown of the next six merged catalyst/macro rows and **earnings**, the soonest prints in the watchlist with the EPS estimate. `spark vol` swaps every row's price sparkline for a volume histogram coloured by each bar's close direction, in the sidebar and both thesis views; `spark price` restores it. The earnings-reaction parity check needed nothing: `impact` already carried beat rate, streak, average surprise and the average close-to-close move.
 
 **v4.1.0** (2026-09-22) — **Feed honesty.** Every quote is stamped when its number actually landed and the stamp survives the last-known-good fallback, so a row whose print is late wears a dim age and a cache fallback wears a red `STALE 7m`; the sidebar title carries a `FRESH` / `RECOVERING 45s` / `DELAYED 6m` chip that never calls a cold start delayed. `wire top` ranks the fragwire feed by event type, watchlist relevance, thesis weight, source credibility and age decay, live rows first with transcript chatter collapsed to the newest chunk per session; `wire latest` restores newest-first and the choice persists.
 
