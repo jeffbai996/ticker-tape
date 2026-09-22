@@ -485,3 +485,10 @@ Verify the built wheel in a separate virtual environment, including runtime
 imports and the packaged stylesheet. Source decryption stays on trusted local
 machines; this repository does not require a GitHub Actions decryption secret.
 Existing local PII and secret guards remain mandatory.
+
+### Encrypted checkout
+
+This repository uses git-crypt. Create a branch in the existing unlocked
+checkout rather than adding a worktree: a new worktree may fail its checkout
+when encrypted files cannot be decoded. Check for uncommitted work before
+switching branches, and preserve it before landing another change.
