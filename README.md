@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v4.2.0*
+*v4.2.1*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -187,7 +187,7 @@ Models with thinking budgets or reasoning effort (Flash 3.8, Gemini Pro, Claude 
 
 **Native web search** fires automatically when a model needs current information. Each provider uses its own search: Claude uses `web_search`, Gemini uses Google Search with grounding metadata, GPT uses the Responses API `web_search`. Search indicators appear inline during thinking. Citation markers are stripped from final output.
 
-**Token usage** displays input/output token counts, elapsed time, and per-model cost breakdown. Toggle with `Ctrl+T`. Anthropic calls use prompt caching on the system block — the static persona/context block is written once and read at 90% discount on subsequent turns. Cache hits are tracked per call.
+**Generation footer** stays above the command input while chat streams: activity, model, `↑` input tokens, `↓` output tokens, `◷` elapsed time, and `↯` average output tokens/second. A compact final line stays beneath the answer. Counts update when the provider reports them; `—` means unavailable, not zero. Throughput includes waiting and tool time. Tool-round usage is accumulated, not replaced by the final request. Narrow terminals omit throughput and cache details first. Toggle live and final footers with `Ctrl+T`; the setting persists.
 
 **Gemini context caching** (opt-in) — set `TICKERTAPE_GEMINI_CACHE=1` to cache the stable system-prompt prefix (user profile + communication rules + output format + memory-tool instructions + tool schemas) server-side via google-genai's caches API. Per-call, only the volatile context (date, live quotes, IBKR snapshot, technicals, recallable memories) flows through `contents`. Cached portion bills at ~25% of normal input rate, so a chat session with the cache active sees ~70% input-cost reduction on flash-preview. Disabled by default because the per-hour storage fee (~$1/M tokens/hour) is only worth paying for active sessions; break-even is ~1 call/hour. The token-usage footer shows `(N,NNNt cached)` alongside the prompt total when a cache hit occurred. Cache fail-opens: any error during create/lookup falls back to the uncached path, so caching can never silently break a chat turn.
 
@@ -268,7 +268,7 @@ Write tools (`set_alert`, `memory_add`, deletes) validate and normalize argument
 | Key | Context | Action |
 |-----|---------|--------|
 | `Ctrl+O` | Chat | Toggle chain-of-thought display |
-| `Ctrl+T` | Chat | Toggle token usage box |
+| `Ctrl+T` | Chat | Toggle generation footer |
 | `Ctrl+P` | Chat | Paste clipboard image (macOS) |
 | `Ctrl+N` | Chat | New line in input |
 | `c` | Ticker | Toggle compact mode |
@@ -380,6 +380,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v4.2.1** (2026-09-26) — **Live chat footer.** A compact animated metrics line stays above the command input during generation, then becomes a single line beneath the answer. Includes model, reported input/output tokens, elapsed time, and average output throughput. Gray terminal glyphs, narrow-layout handling, persisted visibility, and error/cancellation cleanup. Gemini and Anthropic totals now include every tool round; OpenAI publishes cumulative usage after each request.
 
 **v4.2.0** (2026-09-22) — **The July roadmap.** `layout` decides which sidebar sections show and in what order (`layout pulse calendar pnl risk`, `layout add earnings`, `layout rm risk`, `layout reset`), persisted, with two new ambient sections: a **calendar** countdown of the next six merged catalyst/macro rows and **earnings**, the soonest prints in the watchlist with the EPS estimate. `spark vol` swaps every row's price sparkline for a volume histogram coloured by each bar's close direction, in the sidebar and both thesis views; `spark price` restores it. The earnings-reaction parity check needed nothing: `impact` already carried beat rate, streak, average surprise and the average close-to-close move.
 
