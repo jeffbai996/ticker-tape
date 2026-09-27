@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v4.2.1*
+*v4.2.2*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -20,6 +20,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 ### Display
 
 - **Adaptive terminal layout** — The sidebar hides when it would leave less than 78 columns for output, then returns when space permits. Dashboard fields wrap in groups; existing output reflows on resize without fetching again. `c` or `Ctrl+K` toggles the saved compact preference; automatic fitting does not change it.
+- **Short-window chat** — The composer uses at most a third of the terminal height, within a 3–10-row limit including borders. Longer drafts scroll inside the editor. Rotation and window resizing preserve the draft and keyboard focus.
 - **Watchlist groups** — Named symbol groups with sidebar headers, synced to thesis buckets at runtime.
 - **i18n** — Full English/Chinese with 500+ translation keys, CJK-aware column padding via `pad()`.
 
@@ -383,6 +384,8 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v4.2.2** (2026-09-27) — **Responsive terminal layout.** Sidebar visibility follows available width; cached output reflows without refetching, quote fields wrap in groups, and the static index bar keeps complete quotes. The chat composer is capped by terminal height and scrolls long drafts internally. Resizing preserves drafts, cursor, focus, and the saved density preference. F2/F3/F4 open dashboard/markets/earnings; PgUp/PgDn and Ctrl+Home/End navigate output from the command input.
 
 **v4.2.1** (2026-09-26) — **Live chat footer.** A compact animated metrics line stays above the command input during generation, then becomes a single line beneath the answer. Includes model, reported input/output tokens, elapsed time, and average output throughput. Gray terminal glyphs, narrow-layout handling, persisted visibility, and error/cancellation cleanup. Gemini and Anthropic totals now include every tool round; OpenAI publishes cumulative usage after each request.
 
