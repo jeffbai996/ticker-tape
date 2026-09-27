@@ -19,7 +19,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ### Display
 
-- **Compact mode** — Toggle with `c` for a two-line-per-symbol view with sparklines, earnings, technicals, and sidebar watchlist. Auto-enables on narrow terminals.
+- **Adaptive terminal layout** — The sidebar hides when it would leave less than 78 columns for output, then returns when space permits. Dashboard fields wrap in groups; existing output reflows on resize without fetching again. `c` or `Ctrl+K` toggles the saved compact preference; automatic fitting does not change it.
 - **Watchlist groups** — Named symbol groups with sidebar headers, synced to thesis buckets at runtime.
 - **i18n** — Full English/Chinese with 500+ translation keys, CJK-aware column padding via `pad()`.
 
@@ -267,6 +267,9 @@ Write tools (`set_alert`, `memory_add`, deletes) validate and normalize argument
 
 | Key | Context | Action |
 |-----|---------|--------|
+| `F1` / `F2` / `F3` / `F4` | Anywhere | Help / dashboard / markets / earnings |
+| `PgUp` / `PgDn` | Anywhere | Page output without leaving the command input |
+| `Ctrl+Home` / `Ctrl+End` | Anywhere | First / latest output |
 | `Ctrl+O` | Chat | Toggle chain-of-thought display |
 | `Ctrl+T` | Chat | Toggle generation footer |
 | `Ctrl+P` | Chat | Paste clipboard image (macOS) |
