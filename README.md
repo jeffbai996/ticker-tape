@@ -26,6 +26,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ### Monitoring
 
+- **News sources** — AI news requests and the `news` command use Fragwire first. Unreachable, failed, or invalid Fragwire responses fall back to Yahoo and label the source. A successful empty feed stays empty. Set `FRAGWIRE_URL=` to use the fallback directly in disconnected builds; `wire` commands remain Fragwire-only.
 - **Feed health** — The watchlist title carries a `FRESH` / `RECOVERING 45s` / `DELAYED 6m` chip from the age of the last good fetch; a cold start reads as recovering, never delayed. Every quote is stamped when its number actually landed, and a row whose print is late wears a dim age while a cache fallback wears a red `STALE 7m`, so a snapshot is never painted as current. The 5-minute `⚠ STALE` banner still fires above the list.
 - **Alerts** — Smart alerts on price levels, RSI thresholds, SMA crossovers, volume spikes, and margin cushion. Fire-once trigger with auto-removal; technical alerts on a 60s eval cycle.
 - **NLV History** — SQLite-backed NLV snapshots every 60s via peewee ORM (WAL mode). `timeline` shows a 90-day ASCII chart with drawdown and leverage trend.
