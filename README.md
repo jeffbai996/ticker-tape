@@ -94,7 +94,7 @@ Nine models across three providers — switch mid-conversation with `model`.
 | Sonnet 5.5 | Anthropic | adaptive | 1M | Balanced |
 | Opus 5.5 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
 | Fable 5.1 | Anthropic | adaptive | 1M | Most capable — top reasoning |
-| GPT-6 Sol | OpenAI | low | 120K | Flagship GPT — low effort (already plenty for chat) |
+| GPT-6.1 Sol | OpenAI | low | 120K | Flagship GPT — low effort (already plenty for chat) |
 | GPT-5.6 Terra | OpenAI | high | 120K | Balanced GPT, cranked effort |
 | GPT-6 Luna | OpenAI | high | 120K | Fast, cheapest GPT, cranked effort |
 | GPT-6 Astra | OpenAI | medium | 120K | Most capable GPT |
@@ -113,7 +113,7 @@ Type 'model' to list, 'model <name>' to switch.
     opus         Opus 5.5                  claude-opus-5-5                ✓
     fable        Fable 5.1                 claude-fable-5-1               ✓
   ── GPT ──
-    sol          GPT-6 Sol                 gpt-6-sol                      ✓
+    sol          GPT-6.1 Sol               gpt-6.1-sol                    ✓
     terra        GPT-5.6 Terra             gpt-5.6-terra                  ✓
     luna         GPT-6 Luna                gpt-6-luna                     ✓
     astra        GPT-6 Astra               gpt-6-astra                    ✓
