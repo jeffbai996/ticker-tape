@@ -90,6 +90,7 @@ py-modules = [
     "chat_tools",
     "cli",
     "config",
+    "currency_contract",
     "data",
     "db",
     "decision_cards",
