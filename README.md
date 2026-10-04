@@ -503,7 +503,8 @@ Existing local PII and secret guards remain mandatory.
 
 ### Encrypted checkout
 
-This repository uses git-crypt. Create a branch in the existing unlocked
-checkout rather than adding a worktree: a new worktree may fail its checkout
-when encrypted files cannot be decoded. Check for uncommitted work before
-switching branches, and preserve it before landing another change.
+This repository uses git-crypt. Use an isolated task clone with a dedicated
+branch and unlock it with the existing trusted-local key in place. A new
+worktree may fail checkout when encrypted files cannot be decoded. Do not
+copy keys to other hosts or provision hosted decryption. Preserve shared
+checkouts and run the offline launcher before validation.
