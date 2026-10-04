@@ -485,9 +485,16 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 Run validation from an unlocked checkout before merging:
 
 ```sh
-venv/bin/python -m pytest tests -q
+venv/bin/python scripts/validate_offline.py --self-check
+venv/bin/python scripts/validate_offline.py -- tests -q
 venv/bin/python -m pip wheel --no-deps --wheel-dir dist .
 ```
+
+The offline launcher strips inherited credentials and service configuration,
+disables dotenv, redirects Python home resolution and temporary files, and blocks
+network access before test collection. It excludes Git/decryption state from
+test reads and fails on attempted writes outside the disposable artifact.
+Its preflight uses temporary canaries and imports no application code.
 
 Verify the built wheel in a separate virtual environment, including runtime
 imports and the packaged stylesheet. Source decryption stays on trusted local
