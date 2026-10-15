@@ -89,6 +89,12 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 Nine models across three providers — switch mid-conversation with `model`.
 The default is Gemini 4 Argon with low thinking. Set `CHAT_MODEL` to override it.
 
+Use `effort` to see the active model's effort and supported levels, or
+`effort high` to change it for subsequent requests. This works in command and
+chat mode. Each model keeps its setting until the app exits. Gemini supports
+`low`, `medium`, and `high`; Claude and GPT also support `xhigh`. Flash maps
+those levels to thinking budgets of 1,024, 4,096, and 8,192 tokens.
+
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
 | Gemini 4 Argon | Google | low | 900K | Default chat model |
