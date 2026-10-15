@@ -49,7 +49,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ### Research & memos
 
-- **Deep-Dive Analysis** — `analyze <target>` runs a Gemini Pro memo with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity.
+- **Deep-Dive Analysis** — `analyze <target>` runs a Gemini 4 Argon memo with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity.
 - **Archive Navigation** — `memos` / `memo` commands browse and reopen past memos inside the TUI: per-slug listings with conviction-color badges, banner view with front-matter, body rendered through the same markdown pipeline as a live analyze.
 
 ## Screens
@@ -87,11 +87,12 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 ## AI Chat
 
 Nine models across three providers — switch mid-conversation with `model`.
+The default is Gemini 4 Argon with low thinking. Set `CHAT_MODEL` to override it.
 
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
+| Gemini 4 Argon | Google | low | 900K | Default chat model |
 | Flash 3.8 | Google | 1,024 | 900K | Fast answers, cheapest |
-| Gemini Pro | Google | 2,048 | 900K | Deep analysis |
 | Sonnet 5.5 | Anthropic | adaptive | 1M | Balanced |
 | Opus 5.5 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
 | Fable 5.1 | Anthropic | adaptive | 1M | Most capable — top reasoning |
@@ -107,8 +108,8 @@ ticker> model
 Type 'model' to list, 'model <name>' to switch.
 
   ── GEMINI ──
-  ◆ flash        Flash 3.8                 gemini-3.8-flash               ✓
-    pro          Gemini Pro                gemini-3.1-pro-preview         ✓
+  ◆ argon        Gemini 4 Argon            gemini-4-argon                ✓
+    flash        Flash 3.8                 gemini-3.8-flash               ✓
   ── CLAUDE ──
     sonnet       Sonnet 5.5                  claude-sonnet-5-5                ✓
     opus         Opus 5.5                  claude-opus-5-5                ✓
@@ -124,7 +125,7 @@ Type 'model' to list, 'model <name>' to switch.
 
 The AI assistant has a layered context system — it knows who you are, what the market is doing, and what you've told it before.
 
-**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, condensed account summaries (NLV, leverage, margin cushion, top holdings) from all configured accounts are fetched in parallel and injected. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first. Anthropic calls split the system prompt into a stable persona block (cached, ~90% read discount on subsequent turns) and a volatile live-data block (fresh every turn). Gemini calls similarly cache the stable prefix when above the per-model token threshold.
+**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, condensed account summaries (NLV, leverage, margin cushion, top holdings) from all configured accounts are fetched in parallel and injected. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first. Anthropic calls split the system prompt into a stable persona block (cached, ~90% read discount on subsequent turns) and a volatile live-data block (fresh every turn). Gemini 4 Argon uses implicit caching; Flash can explicitly cache the stable prefix when enabled and above its token threshold.
 
 **Slash commands** — Feed specific data to the AI mid-conversation: `/ta AAPL` runs technicals and injects the output, `/pos` pulls IBKR positions, `/acct` gets account summary. The AI analyzes the data in context.
 
@@ -185,7 +186,7 @@ history 2 · peek N · search <term> · delete N[-M] · compact · clear
 
 ### Chain-of-Thought, Search & Token Usage
 
-Models with thinking budgets or reasoning effort (Flash 3.8, Gemini Pro, Claude Sonnet, Claude Opus, and the GPT tiers) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
+Models with thinking levels, thinking budgets, or reasoning effort (Gemini 4 Argon, Flash 3.8, Claude Sonnet, Claude Opus, and the GPT tiers) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
 
 **Native web search** fires automatically when a model needs current information. Each provider uses its own search: Claude uses `web_search`, Gemini uses Google Search with grounding metadata, GPT uses the Responses API `web_search`. Search indicators appear inline during thinking. Citation markers are stripped from final output.
 
@@ -284,7 +285,7 @@ Write tools (`set_alert`, `memory_add`, deletes) validate and normalize argument
 
 ## Deep-Dive Analysis
 
-`analyze <target>` (alias: `dive`) runs a doc-grade memo via Gemini Pro with full tool access and Google grounding. Memos stream to the terminal in real time and are archived to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter.
+`analyze <target>` (alias: `dive`) runs a doc-grade memo via Gemini 4 Argon with full tool access and Google grounding. Memos stream to the terminal in real time and are archived to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter.
 
 ```
 analyze TSLA                    # symbol dive
@@ -429,7 +430,7 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 
 **v2.6.1** (2026-04-19) — Archive navigation. `memos` lists archived slugs (count + newest date); `memos <slug>` shows each memo's date, conviction level, and key claim with an index column. `memo <N>` reopens memo #N from the last listing; `memo latest [slug]` jumps to the newest. Banner shows date, conviction, angle, model; body rendered through _md_to_rich so it flows like a fresh analyze. Read-only — no AI calls, no archive modification.
 
-**v2.6** (2026-04-19) — **Deep-dive analysis.** New `analyze <target>` command (alias: `dive`) runs doc-grade memos via Gemini Pro with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter; prior memos load into the system prompt for "since last memo" continuity. Routes symbol / thesis / freeform targets under their own slug. Conviction level extracted into front-matter for timeline views. Error memos written on backend failure so failures stay auditable. Chat rendering: negative lookahead added to cross-line-bold fix so adjacent bold-prefixed list items stop collapsing onto one line (Gemini Pro dense-list regression).
+**v2.6** (2026-04-19) — **Deep-dive analysis.** New `analyze <target>` command (alias: `dive`) runs doc-grade memos via Gemini with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter; prior memos load into the system prompt for "since last memo" continuity. Routes symbol / thesis / freeform targets under their own slug. Conviction level extracted into front-matter for timeline views. Error memos written on backend failure so failures stay auditable. Chat rendering: negative lookahead added to cross-line-bold fix so adjacent bold-prefixed list items stop collapsing onto one line (Gemini dense-list regression).
 
 **v2.5.5** (2026-04-16) — View polish sweep. **Thesis compact**: %H / %R pulled left 1 cell each. **Commodities**: name column tightened 3 cells. **Correlation matrix**: proper heatmap — amber band for 0.6-0.8 ("hidden beta" zone), dim amber for 0.4-0.6, white 0.2-0.4; legend updated. **Earnings surprises**: full rewrite — $ sign in its own column with `-$` leading negatives, Beat %/detail treated as fixed-width pair so subsequent columns don't shift, all percentages right-justified on visible width not markup-wrapped length. **Valuation screen**: column spacing tightened so the row no longer spills off ~80-char panes (inter-column gap 2→1, Chg% built from raw pct not `color_pct` helper). **IBKR consolidated view**: third purple "Combined" section for cross-account NLV/Leverage/Margin Util, positions table P&L sign aligned in its own column (all +/- glyphs in one vertical line regardless of magnitude), column headers shifted left to align with data, USD/TWD added as relevant FX pair. **P&L view**: stripped redundant "of NLV" suffix from daily P&L parenthetical. **Briefing AI**: `brief ai` now routes directly through Gemini Flash backend instead of the user's currently-selected chat model (was broken if user was on non-Gemini model).
 
