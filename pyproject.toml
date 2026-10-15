@@ -38,10 +38,6 @@ dependencies = [
     # IBKR MCP transport
     "httpx>=0.27",
     "mcp>=1.0",
-    # AI providers
-    "google-genai>=1.0",
-    "anthropic>=0.40",
-    "openai>=2.0",
     # Optional but commonly imported
     "beautifulsoup4>=4.12",
     "requests>=2.31",
@@ -88,6 +84,8 @@ py-modules = [
     "catalyst",
     "chat",
     "chat_tools",
+    "subscription_runtime",
+    "subscription_chat",
     "cli",
     "config",
     "currency_contract",

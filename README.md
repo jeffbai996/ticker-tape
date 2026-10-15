@@ -49,7 +49,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 
 ### Research & memos
 
-- **Deep-Dive Analysis** — `analyze <target>` runs a Gemini 4 Argon memo with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity.
+- **Deep-Dive Analysis** — `analyze <target>` runs a Gemini 4 Argon memo with application tools and subscription web search. Memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity.
 - **Archive Navigation** — `memos` / `memo` commands browse and reopen past memos inside the TUI: per-slug listings with conviction-color badges, banner view with front-matter, body rendered through the same markdown pipeline as a live analyze.
 
 ## Screens
@@ -89,6 +89,13 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 Nine models across three providers — switch mid-conversation with `model`.
 The default is Gemini 4 Argon with low thinking. Set `CHAT_MODEL` to override it.
 
+Chat and deep-dive analysis run exclusively through subscription CLIs:
+`agy` for Gemini, `claude` for Claude, and `codex` signed in with ChatGPT for GPT.
+Sign in to each CLI before use. Set `TICKERTAPE_AGY_HOST` to an SSH host with
+an authenticated `agy` installation when Gemini runs remotely. API-key clients
+and fallback routes are removed. Missing login, quota, or runtime access stops
+the request instead of switching to a billable provider.
+
 Use `effort` to see the active model's effort and supported levels, or
 `effort high` to change it for subsequent requests. This works in command and
 chat mode. Each model keeps its setting until the app exits. Gemini supports
@@ -98,10 +105,10 @@ those levels to thinking budgets of 1,024, 4,096, and 8,192 tokens.
 For GPT models, `fast` shows the current Fast mode setting; `fast on` enables
 it and `fast off` selects standard processing. The setting is off by default,
 is separate from effort, and stays with each model until the app exits.
-Fast mode requests use `service_tier=priority` and premium API pricing
-([OpenAI Fast mode](https://developers.openai.com/api/docs/guides/fast-mode)).
-The live cost footer shows an unknown cost for premium requests because the
-registry holds standard rates; history cost estimates also use standard rates.
+Fast mode selects Codex's subscription `service_tier="fast"`; turning it off
+selects `default`. Fast mode consumes more subscription quota
+([Codex speed settings](https://learn.chatgpt.com/docs/agent-configuration/speed)).
+The app does not report API-equivalent token prices as subscription charges.
 
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
@@ -139,7 +146,7 @@ Type 'model' to list, 'model <name>' to switch.
 
 The AI assistant has a layered context system — it knows who you are, what the market is doing, and what you've told it before.
 
-**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, condensed account summaries (NLV, leverage, margin cushion, top holdings) from all configured accounts are fetched in parallel and injected. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first. Anthropic calls split the system prompt into a stable persona block (cached, ~90% read discount on subsequent turns) and a volatile live-data block (fresh every turn). Gemini 4 Argon uses implicit caching; Flash can explicitly cache the stable prefix when enabled and above its token threshold.
+**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, condensed account summaries (NLV, leverage, margin cushion, top holdings) from all configured accounts are fetched in parallel and injected. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first. The subscription runtimes manage their own caching.
 
 **Slash commands** — Feed specific data to the AI mid-conversation: `/ta AAPL` runs technicals and injects the output, `/pos` pulls IBKR positions, `/acct` gets account summary. The AI analyzes the data in context.
 
@@ -147,13 +154,17 @@ The AI assistant has a layered context system — it knows who you are, what the
 
 ### Image Input
 
-Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths directly into the input. Works across all nine models — Anthropic, Gemini, and OpenAI all receive the image as base64 content blocks in their native format. Use it for chart analysis, screenshot questions, or anything visual. Hard cap at 2 MB per image (override with `TICKERTAPE_MAX_IMAGE_BYTES`); oversize images get rejected with a notify, since image tokens add up fast — a 4K screenshot can cost ~16K input tokens *per turn the conversation references it*.
+Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths into
+the input. GPT and Claude subscription runtimes accept images. Gemini's
+headless subscription input currently accepts text only; image requests fail
+with an explicit message rather than switching to an API. The image cap is
+2 MB per image (`TICKERTAPE_MAX_IMAGE_BYTES` overrides it).
 
 ### Memory
 
 Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all nine models share the same knowledge base.
 
-**Three ways to save:** `memory add <text>` from the command bar, `remember <text>` while in chat mode (direct, no API call), or just tell the AI conversationally — "remember that AAPL reports Jan 30" — and it saves automatically.
+**Three ways to save:** `memory add <text>` from the command bar, `remember <text>` while in chat mode (handled locally), or just tell the AI conversationally — "remember that AAPL reports Jan 30" — and it saves automatically.
 
 <p align="center"><img src="assets/demo-chat-memory.png" width="85%" /></p>
 
@@ -182,8 +193,7 @@ Conversation history persists to disk across sessions and model switches. `histo
 ticker> history
 
 ═══ HISTORY (12 turns, page 1/2) ═══
-  Fable $0.04  Opus $0.03  Sonnet $0.01  GPT $0.02  Gemini $0.02
-  ~8.2K tokens  ~$0.12
+  ~8.2K tokens · subscription
 
   1  Q: what do you think about AMZN's setup going into earnings?
      sonnet ▸ AMZN looks solid — RSI 52 is neutral, sitting right on the 50d...
@@ -200,13 +210,17 @@ history 2 · peek N · search <term> · delete N[-M] · compact · clear
 
 ### Chain-of-Thought, Search & Token Usage
 
-Models with thinking levels, thinking budgets, or reasoning effort (Gemini 4 Argon, Flash 3.8, Claude Sonnet, Claude Opus, and the GPT tiers) stream their internal reasoning before responding — buffered by paragraph for readability. Toggle visibility with `Ctrl+O`. When hidden, thinking still runs and improves the answer.
+Subscription replies appear when a CLI completes its structured turn. Local
+tool activity appears between turns. Native reasoning details depend on the
+runtime and are not fabricated when unavailable.
 
-**Native web search** fires automatically when a model needs current information. Each provider uses its own search: Claude uses `web_search`, Gemini uses Google Search with grounding metadata, GPT uses the Responses API `web_search`. Search indicators appear inline during thinking. Citation markers are stripped from final output.
+**Native web search** is provided by the selected subscription runtime;
+application tools still fetch quotes, news, account data, and saved memos.
 
-**Generation footer** stays above the command input while chat streams: activity, model, `↑` input tokens, `↓` output tokens, `◷` elapsed time, and `↯` average output tokens/second. A compact final line stays beneath the answer. Counts update when the provider reports them; `—` means unavailable, not zero. Throughput includes waiting and tool time. Tool-round usage is accumulated, not replaced by the final request. Narrow terminals omit throughput and cache details first. Toggle live and final footers with `Ctrl+T`; the setting persists.
+**Generation footer** stays above the command input while chat runs: activity, model, `↑` input tokens, `↓` output tokens, `◷` elapsed time, and `↯` average output tokens/second. A compact final line stays beneath the answer. Counts appear only when the subscription runtime reports them; `—` means unavailable, not zero. Throughput includes waiting and tool time. Unavailable token and cost fields stay unknown. Narrow terminals omit throughput and cache details first. Toggle live and final footers with `Ctrl+T`; the setting persists.
 
-**Gemini context caching** (opt-in) — set `TICKERTAPE_GEMINI_CACHE=1` to cache the stable system-prompt prefix (user profile + communication rules + output format + memory-tool instructions + tool schemas) server-side via google-genai's caches API. Per-call, only the volatile context (date, live quotes, IBKR snapshot, technicals, recallable memories) flows through `contents`. Cached portion bills at ~25% of normal input rate, so a chat session with the cache active sees ~70% input-cost reduction on flash-preview. Disabled by default because the per-hour storage fee (~$1/M tokens/hour) is only worth paying for active sessions; break-even is ~1 call/hour. The token-usage footer shows `(N,NNNt cached)` alongside the prompt total when a cache hit occurred. Cache fail-opens: any error during create/lookup falls back to the uncached path, so caching can never silently break a chat turn.
+**Context caching** is managed by the subscription runtimes. The app has no
+explicit-cache API route or per-hour API storage charge.
 
 A random thinking placeholder (from a pool of ~80 words including "Catfishing", "Moonwalking", "Glazing") shows while waiting for the first token.
 
@@ -299,7 +313,7 @@ Write tools (`set_alert`, `memory_add`, deletes) validate and normalize argument
 
 ## Deep-Dive Analysis
 
-`analyze <target>` (alias: `dive`) runs a doc-grade memo via Gemini 4 Argon with full tool access and Google grounding. Memos stream to the terminal in real time and are archived to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter.
+`analyze <target>` (alias: `dive`) runs a doc-grade memo via Gemini 4 Argon with application tools and subscription web search. Completed memo turns appear in the terminal and are archived to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter.
 
 ```
 analyze TSLA                    # symbol dive
@@ -376,9 +390,6 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `textual` — TUI framework, reactive properties, CSS styling
 - `rich` — Markup rendering, Text objects for scrolling tape
 - `yfinance` — Market data, technicals, earnings, insider transactions
-- `google-genai` — Gemini chat with streaming, chain-of-thought, Google Search, code execution
-- `anthropic` — Claude chat with extended thinking, web search, code execution, prompt caching
-- `openai` — GPT chat with Responses API web search
 - `tavily` — LLM-optimized web search fallback (DDG as secondary fallback)
 - `mcp` — IBKR MCP client (streamable HTTP, multi-account)
 - `httpx` — Async HTTP transport
@@ -444,7 +455,7 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 
 **v2.6.1** (2026-04-19) — Archive navigation. `memos` lists archived slugs (count + newest date); `memos <slug>` shows each memo's date, conviction level, and key claim with an index column. `memo <N>` reopens memo #N from the last listing; `memo latest [slug]` jumps to the newest. Banner shows date, conviction, angle, model; body rendered through _md_to_rich so it flows like a fresh analyze. Read-only — no AI calls, no archive modification.
 
-**v2.6** (2026-04-19) — **Deep-dive analysis.** New `analyze <target>` command (alias: `dive`) runs doc-grade memos via Gemini with full tool access and Google grounding. Memos archive to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter; prior memos load into the system prompt for "since last memo" continuity. Routes symbol / thesis / freeform targets under their own slug. Conviction level extracted into front-matter for timeline views. Error memos written on backend failure so failures stay auditable. Chat rendering: negative lookahead added to cross-line-bold fix so adjacent bold-prefixed list items stop collapsing onto one line (Gemini dense-list regression).
+**v2.6** (2026-04-19) — **Deep-dive analysis.** New `analyze <target>` command (alias: `dive`) runs doc-grade memos via Gemini with application tools and subscription web search. Memos archive to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter; prior memos load into the system prompt for "since last memo" continuity. Routes symbol / thesis / freeform targets under their own slug. Conviction level extracted into front-matter for timeline views. Error memos written on backend failure so failures stay auditable. Chat rendering: negative lookahead added to cross-line-bold fix so adjacent bold-prefixed list items stop collapsing onto one line (Gemini dense-list regression).
 
 **v2.5.5** (2026-04-16) — View polish sweep. **Thesis compact**: %H / %R pulled left 1 cell each. **Commodities**: name column tightened 3 cells. **Correlation matrix**: proper heatmap — amber band for 0.6-0.8 ("hidden beta" zone), dim amber for 0.4-0.6, white 0.2-0.4; legend updated. **Earnings surprises**: full rewrite — $ sign in its own column with `-$` leading negatives, Beat %/detail treated as fixed-width pair so subsequent columns don't shift, all percentages right-justified on visible width not markup-wrapped length. **Valuation screen**: column spacing tightened so the row no longer spills off ~80-char panes (inter-column gap 2→1, Chg% built from raw pct not `color_pct` helper). **IBKR consolidated view**: third purple "Combined" section for cross-account NLV/Leverage/Margin Util, positions table P&L sign aligned in its own column (all +/- glyphs in one vertical line regardless of magnitude), column headers shifted left to align with data, USD/TWD added as relevant FX pair. **P&L view**: stripped redundant "of NLV" suffix from daily P&L parenthetical. **Briefing AI**: `brief ai` now routes directly through Gemini Flash backend instead of the user's currently-selected chat model (was broken if user was on non-Gemini model).
 
@@ -494,7 +505,6 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 
 **v0.1** (2026-02-19) — Project scaffolding. Textual app shell. yfinance data layer with TTL caching. Rich markup formatters.
 </details>
-
 
 ### Local validation
 
