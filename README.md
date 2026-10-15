@@ -95,6 +95,14 @@ chat mode. Each model keeps its setting until the app exits. Gemini supports
 `low`, `medium`, and `high`; Claude and GPT also support `xhigh`. Flash maps
 those levels to thinking budgets of 1,024, 4,096, and 8,192 tokens.
 
+For GPT models, `fast` shows the current Fast mode setting; `fast on` enables
+it and `fast off` selects standard processing. The setting is off by default,
+is separate from effort, and stays with each model until the app exits.
+Fast mode requests use `service_tier=priority` and premium API pricing
+([OpenAI Fast mode](https://developers.openai.com/api/docs/guides/fast-mode)).
+The live cost footer shows an unknown cost for premium requests because the
+registry holds standard rates; history cost estimates also use standard rates.
+
 | Model | Provider | Thinking | Context | Notes |
 |-------|----------|----------|---------|-------|
 | Gemini 4 Argon | Google | low | 900K | Default chat model |
