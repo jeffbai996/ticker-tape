@@ -1,1 +1,23 @@
-{"gates":[{"prefix":"","command":["venv/bin/python","-m","pytest","-q"]}]}
+{
+  "gates": [
+    {
+      "prefix": "",
+      "command": [
+        "venv/bin/python",
+        "-m",
+        "pytest",
+        "-q"
+      ]
+    },
+    {
+      "prefix": "",
+      "command": [
+        "venv/bin/python",
+        "scripts/validate_offline.py",
+        "--",
+        "tests",
+        "-q"
+      ]
+    }
+  ]
+}
