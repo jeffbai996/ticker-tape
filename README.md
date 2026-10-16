@@ -1,5 +1,5 @@
 # ticker-tape — Financial Data Terminal
-*v4.2.2*
+*v4.3.0*
 
 Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
 
@@ -46,6 +46,15 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 - **Sidebar layout** — `layout pulse calendar pnl risk` sets which sections show and in what order (`layout add earnings`, `layout rm risk`, `layout reset`); persisted. The **calendar** section is an ambient countdown of the next six merged catalyst/macro rows; **earnings** lists the soonest prints in the watchlist with the EPS estimate.
 - **Wire order** — `wire top` ranks the fragwire feed by priority (event type × on-book × thesis × source credibility × age decay, live rows first); `wire latest` is newest-first. The choice persists across sessions.
 
+Symbol views use flags: `SYM --profile`, `SYM --ta`, `SYM --chart`,
+`SYM --intraday`, `SYM --options`, `SYM --news`, `SYM --insider`,
+`SYM --dividends`, `SYM --short`, `SYM --ratings`, and `SYM --impact`.
+A plain symbol shows metrics only. Existing view aliases continue to work.
+
+`h`, `help`, and `?` open a compact index. Use `help symbols`, `help market`,
+`help watchlist`, `help portfolio`, `help research`, `help chat`, or `help keys`
+for a focused reference; `help all` expands every topic.
+
 ### Research & memos
 
 - **Deep-Dive Analysis** — `analyze <target>` runs a Gemini 4 Argon memo with application tools and subscription web search. Memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity.
@@ -59,7 +68,7 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 | **Heatmap** | Color-coded performance grid sorted by daily change |
 | **Technicals** | SMA 20/50/200, RSI, MACD with crossover detection, Bollinger Bands, ATR, relative strength vs benchmark |
 | **Intraday** | 5-minute bars with VWAP overlay, multi-row tall sparkline charts |
-| **Lookup** | Full stock profile: valuation (P/E, P/S, PEG, EV), margins, financials, ownership breakdown, analyst consensus |
+| **Lookup** | Stock metrics: valuation (P/E, P/S, PEG, EV), margins, financials, ownership breakdown, analyst consensus |
 | **Earnings** | Calendar with countdown, EPS estimates from yfinance calendar dict |
 | **Economic** | FOMC, CPI, NFP, GDP, PCE dates with urgency coloring |
 | **Event** | `event fomc` / `event 3` / `event SYM` opens a calendar row as a workspace: what it is in plain language and why it matters, the sectors and public proxies it touches with their live move, prior / consensus / actual with the surprise once printed, and a countdown with a pre / live / post phase |
@@ -409,6 +418,11 @@ Fully integrated Chinese language support with CJK-aware column alignment.
 </p>
 
 ## Changelog
+
+**v4.3.0** — **Command navigation.** Company profiles are opt-in with `SYM --profile`.
+Symbol-specific views share a flag grammar. Help opens a compact topic index,
+with focused references and an explicit `help all` view. The scrolling event
+banner above the command input is removed.
 
 **v4.2.2** (2026-09-27) — **Responsive terminal layout.** Sidebar visibility follows available width; cached output reflows without refetching, quote fields wrap in groups, and the static index bar keeps complete quotes. The chat composer is capped by terminal height and scrolls long drafts internally. Resizing preserves drafts, cursor, focus, and the saved density preference. F2/F3/F4 open dashboard/markets/earnings; PgUp/PgDn and Ctrl+Home/End navigate output from the command input.
 
