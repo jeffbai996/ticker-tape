@@ -17,6 +17,7 @@
 USER_GUIDE.md filter=git-crypt diff=git-crypt
 ROADMAP.md filter=git-crypt diff=git-crypt
 docs/superpowers/** filter=git-crypt diff=git-crypt
+docs/TEST_DIET.md filter=git-crypt diff=git-crypt
 
 # ── Public scaffolding exceptions (plaintext) ──
 data/demo/** !filter !diff
