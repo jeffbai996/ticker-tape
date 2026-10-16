@@ -45,7 +45,6 @@ Built on Textual (Python TUI framework) with Rich markup rendering. Data layer u
 - **Volume sparks** — `spark vol` swaps every row's price sparkline for a volume histogram coloured by each bar's close direction; `spark price` restores it. Persisted.
 - **Sidebar layout** — `layout pulse calendar pnl risk` sets which sections show and in what order (`layout add earnings`, `layout rm risk`, `layout reset`); persisted. The **calendar** section is an ambient countdown of the next six merged catalyst/macro rows; **earnings** lists the soonest prints in the watchlist with the EPS estimate.
 - **Wire order** — `wire top` ranks the fragwire feed by priority (event type × on-book × thesis × source credibility × age decay, live rows first); `wire latest` is newest-first. The choice persists across sessions.
-- **Event tape** — bottom strip of recent trading events (alerts, movers, calendar); toggle with `Ctrl+E` or `events on/off`. Deduped ring buffer, pure data structure.
 
 ### Research & memos
 
@@ -307,7 +306,6 @@ Write tools (`set_alert`, `memory_add`, deletes) validate and normalize argument
 | `Ctrl+N` | Chat | New line in input |
 | `c` | Ticker | Toggle compact mode |
 | `l` | Ticker | Switch language (en/zh) |
-| `Ctrl+E` | Ticker | Toggle bottom event tape |
 | `←` / `→` | Time travel | Scrub one day back / forward |
 | `Home` | Time travel | Return to live |
 
