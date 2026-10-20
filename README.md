@@ -158,7 +158,7 @@ The AI assistant has a layered context system — it knows who you are, what the
 
 **Slash commands** — Feed specific data to the AI mid-conversation: `/ta AAPL` runs technicals and injects the output, `/pos` pulls IBKR positions, `/acct` gets account summary. The AI analyzes the data in context.
 
-**Web search** — When the AI needs current information beyond what's in context, it searches the web automatically: Anthropic models use their native `web_search` tool (capped at 2 searches per turn to bound cost), Gemini grounds via Google Search, and OpenAI/other paths fall back to Tavily (optimized for LLM consumption) with DuckDuckGo as a free fallback. No manual trigger required.
+**Web search** — When the AI needs current information beyond what's in context, it searches the web automatically: Anthropic models use their native `web_search` tool (capped at 2 searches per turn to bound cost), Gemini grounds via Google Search, and other paths use DuckDuckGo search (`ddgs`). No manual trigger required.
 
 ### Image Input
 
@@ -397,7 +397,7 @@ Multi-account MCP client over streamable HTTP. Two accounts on the same or separ
 - `textual` — TUI framework, reactive properties, CSS styling
 - `rich` — Markup rendering, Text objects for scrolling tape
 - `yfinance` — Market data, technicals, earnings, insider transactions
-- `tavily` — LLM-optimized web search fallback (DDG as secondary fallback)
+- `ddgs` — DuckDuckGo web search
 - `mcp` — IBKR MCP client (streamable HTTP, multi-account)
 - `httpx` — Async HTTP transport
 - `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
@@ -416,6 +416,18 @@ Fully integrated Chinese language support with CJK-aware column alignment.
   <img src="assets/dashboard-en.png" width="49%" />
   <img src="assets/dashboard-zh.png" width="49%" />
 </p>
+
+## Running it
+
+The Python sources and tests are encrypted with git-crypt (see `.gitattributes`),
+so running the app needs an unlocked checkout. From one:
+
+```sh
+python3 -m venv venv
+venv/bin/pip install -e .
+venv/bin/ticker-tape          # the terminal app
+./tape --help                 # headless CLI; same as venv/bin/ticker-tape-cli
+```
 
 ## Changelog
 
