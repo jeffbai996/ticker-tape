@@ -1,426 +1,13 @@
-# ticker-tape — Financial Data Terminal
-*v4.3.0*
+# ticker-tape
 
-Real-time quotes, thesis-driven portfolio views, technical analysis, and AI chat — all in a TUI that fits in a tmux pane.
+Financial data terminal: quotes, thesis-driven portfolio views, technicals, AI chat and IBKR portfolio integration in a Textual TUI.
 
-<p>
-  <img src="assets/screens.png" width="49%" />
-  <img src="assets/chat-zh.png" width="49%" />
-</p>
+<img src="assets/screens.png" width="75%" />
 
-## Architecture
-
-Built on Textual (Python TUI framework) with Rich markup rendering. Data layer uses yfinance with a TTL-cached info pipeline and parallel batch fetching via `ThreadPoolExecutor`. IBKR integration through MCP streamable HTTP with multi-account support.
-
-### Performance
-
-- **Refresh** — 15-second quote cycle, parallel sparkline fetches (6 workers); quotes display before charts load.
-- **Cache** — 10s TTL on `.info` calls, 120s on technicals, 60s on benchmark history. Eliminates redundant yfinance requests across sidebar, thesis, and lookup views.
-
-### Display
-
-- **Adaptive terminal layout** — The sidebar hides when it would leave less than 78 columns for output, then returns when space permits. Dashboard fields wrap in groups; existing output reflows on resize without fetching again. `c` or `Ctrl+K` toggles the saved compact preference; automatic fitting does not change it.
-- **Short-window chat** — The composer uses at most a third of the terminal height, within a 3–10-row limit including borders. Longer drafts scroll inside the editor. Rotation and window resizing preserve the draft and keyboard focus.
-- **Watchlist groups** — Named symbol groups with sidebar headers, synced to thesis buckets at runtime.
-- **i18n** — Full English/Chinese with 500+ translation keys, CJK-aware column padding via `pad()`.
-
-### Monitoring
-
-- **News sources** — AI news requests and the `news` command use Fragwire first. Unreachable, failed, or invalid Fragwire responses fall back to Yahoo and label the source. A successful empty feed stays empty. Set `FRAGWIRE_URL=` to use the fallback directly in disconnected builds; `wire` commands remain Fragwire-only.
-- **Feed health** — The watchlist title carries a `FRESH` / `RECOVERING 45s` / `DELAYED 6m` chip from the age of the last good fetch; a cold start reads as recovering, never delayed. Every quote is stamped when its number actually landed, and a row whose print is late wears a dim age while a cache fallback wears a red `STALE 7m`, so a snapshot is never painted as current. The 5-minute `⚠ STALE` banner still fires above the list.
-- **Alerts** — Smart alerts on price levels, RSI thresholds, SMA crossovers, volume spikes, and margin cushion. Fire-once trigger with auto-removal; technical alerts on a 60s eval cycle.
-- **NLV History** — SQLite-backed NLV snapshots every 60s via peewee ORM (WAL mode). `timeline` shows a 90-day ASCII chart with drawdown and leverage trend.
-- **P/L conventions** — All change/P&L/drawdown math goes through a single `pricing` module. Daily change % baselines on the previous regular-session close (bulk history); extended-hours % baselines on the last regular-session close; daily P&L % is recomputed from raw P&L over NLV. Zero/negative/missing baselines yield no figure — never a fake 0%.
-
-### Trading workflows
-
-- **Morning Briefing** — `brief` assembles portfolio health, macro context (10 indicators including DXY, 10Y, BTC), watchlist movers, sector snapshot, news headlines per top mover, and upcoming earnings with EPS estimates. `brief ai` adds AI synthesis.
-- **Position Sizing** — `whatif [buy/sell] SYM QTY` runs an IBKR what-if with concentration and cushion analysis. Omit the direction to see the buy and sell legs side by side.
-- **Earnings Tracker** — `surprises` shows watchlist-wide EPS beat/miss history with persistence to SQLite.
-- **Backtest / Thesis Replay** — `bt [SYM] [ccy CAD|USD]` replays the fills ledger against a benchmark: equity curve with entry/exit marks, book vs buy-&-hold vs alpha, max drawdown. Mixed CAD/USD books normalize to one report currency at each date's FX rate. Seed the ledger from an IBKR Flex Query with `python flex_import.py <export.csv>` (the live execution API only reaches ~7 days back; Flex reaches years).
-- **Shadow books** — `shadows` replays standing counterfactual ledgers (`data/shadows/*.csv` — "never trimmed", "kept the hedge") through the same engine over the same bars, so the running dollar cost of every major decision stays visible.
-- **Time travel** — `tt [date]` freezes the terminal AS OF a past date: that day's closes, and positions/cost basis/P&L reconstructed from the fills ledger. `←`/`→` scrub by day, `Home` returns to live.
-- **Thesis breakers** — `breakers` / `tw` renders the external watcher's sell-discipline checklist: health headline, fired/holding grouping, catalyst calendar, rotation estimate. Read-only glass — the watcher owns the discipline.
-- **Decision cards** — a fired alert now attaches a pre-computed playbook (e.g. a trim ladder sized to restore a target margin cushion) so the next step is a decision, not a research task. `note` annotates fills with one-line thesis notes stored in a sidecar (survives ledger re-imports).
-- **Volume sparks** — `spark vol` swaps every row's price sparkline for a volume histogram coloured by each bar's close direction; `spark price` restores it. Persisted.
-- **Sidebar layout** — `layout pulse calendar pnl risk` sets which sections show and in what order (`layout add earnings`, `layout rm risk`, `layout reset`); persisted. The **calendar** section is an ambient countdown of the next six merged catalyst/macro rows; **earnings** lists the soonest prints in the watchlist with the EPS estimate.
-- **Wire order** — `wire top` ranks the fragwire feed by priority (event type × on-book × thesis × source credibility × age decay, live rows first); `wire latest` is newest-first. The choice persists across sessions.
-
-Symbol views use flags: `SYM --profile`, `SYM --ta`, `SYM --chart`,
-`SYM --intraday`, `SYM --options`, `SYM --news`, `SYM --insider`,
-`SYM --dividends`, `SYM --short`, `SYM --ratings`, and `SYM --impact`.
-A plain symbol shows metrics only. Existing view aliases continue to work.
-
-`h`, `help`, and `?` open a compact index. Use `help symbols`, `help market`,
-`help watchlist`, `help portfolio`, `help research`, `help chat`, or `help keys`
-for a focused reference; `help all` expands every topic.
-
-### Research & memos
-
-- **Deep-Dive Analysis** — `analyze <target>` runs a Gemini 4 Argon memo with application tools and subscription web search. Memos archive to `data/analyses/{slug}/` with YAML front-matter (target, date, conviction, key_claim) and load prior memos into context for "since last memo" continuity.
-- **Archive Navigation** — `memos` / `memo` commands browse and reopen past memos inside the TUI: per-slug listings with conviction-color badges, banner view with front-matter, body rendered through the same markdown pipeline as a live analyze.
-
-## Screens
-
-| View | What it shows |
-|------|--------------|
-| **Thesis** | Two-line per symbol: price, change, ext hours, sparkline, RSI, 52-week range bar, earnings countdown, SMA signals, volume ratio, ATH%, relative strength. Portfolio header with breadth metrics and 10-indicator market context (incl. gold). |
-| **Heatmap** | Color-coded performance grid sorted by daily change |
-| **Technicals** | SMA 20/50/200, RSI, MACD with crossover detection, Bollinger Bands, ATR, relative strength vs benchmark |
-| **Intraday** | 5-minute bars with VWAP overlay, multi-row tall sparkline charts |
-| **Lookup** | Stock metrics: valuation (P/E, P/S, PEG, EV), margins, financials, ownership breakdown, analyst consensus |
-| **Earnings** | Calendar with countdown, EPS estimates from yfinance calendar dict |
-| **Economic** | FOMC, CPI, NFP, GDP, PCE dates with urgency coloring |
-| **Event** | `event fomc` / `event 3` / `event SYM` opens a calendar row as a workspace: what it is in plain language and why it matters, the sectors and public proxies it touches with their live move, prior / consensus / actual with the surprise once printed, and a countdown with a pre / live / post phase |
-| **Insider** | Recent insider transactions with type/value/shares |
-| **Options** | Options chain with IV, ATM/ITM/OTM tagging, moneyness filtering, expiration picker. A priced strip above the chain: ATM-straddle expected move (±$ / ±%) against the typical realised print with a rich/cheap verdict, ATM IV, 25-delta put/call skew, IV term structure across the nearest expiries, and volume/OI outliers |
-| **Correlation** | NxN correlation matrix across watchlist, color-coded by strength, avg pairwise metric |
-| **Comparison** | Side-by-side multi-symbol performance comparison |
-| **Screening** | Quick multi-symbol comparison table for filtering ideas |
-| **Signal boards** | Saved rule sets over the technicals the sidebar already computes (`sig add momo rsi>60 vol>1.5 above:sma200 rank vol`), evaluated over the watchlist into match / pending / miss bands with the reason on every row; save matches as a group, or arm the closest single alert for a name |
-| **Timeline** | 90-day NLV ASCII chart with drawdown from peak, leverage trend, cushion |
-| **Surprises** | Watchlist-wide earnings surprise history: EPS beat/miss, price reaction, streaks |
-| **Impact** | Per-symbol historical earnings reactions: EPS surprise, next-day price move, beat streak, beat rate |
-| **Sizing** | Pre-trade what-if: margin impact, concentration weight, cushion before/after |
-| **Briefing** | Morning briefing: portfolio health, macro (10 indicators incl. DXY/10Y/BTC), movers, sector snapshot, news headlines per top mover, earnings with EPS estimates |
-| **Archive** | Browse written analyze memos: slug list with counts/dates, per-slug numbered listing with conviction color + key claim, reopen view with front-matter banner |
-| **Cockpit** | Risk cockpit: traffic-lit verdict, per-position margin treatment (from SELL-all what-ifs), VaR/vol/beta/drawdown, survivability |
-| **Carry** | Cost of carry: margin interest vs dividend income, per-day $, % of NLV, breakeven return on the borrowed slice |
-| **Catalyst** | Forward per-symbol catalyst calendar (conferences, product/policy dates) merged with the macro econ calendar |
-| **Backtest** | Fills-ledger replay vs benchmark: equity curve with entry/exit marks, alpha, max DD, FX-normalized |
-| **Shadows** | Counterfactual ledgers vs the real book — the running cost of past decisions |
-| **Breakers** | Thesis-breaker checklist from the external watcher: health headline, grouping, catalyst calendar, rotation estimate |
-| **Time travel** | The whole terminal AS OF a past date, ←/→ day scrubbing, ledger-reconstructed book |
-
-## AI Chat
-
-Nine models across three providers — switch mid-conversation with `model`.
-The default is Gemini 4 Argon with low thinking. Set `CHAT_MODEL` to override it.
-
-Chat and deep-dive analysis run exclusively through subscription CLIs:
-`agy` for Gemini, `claude` for Claude, and `codex` signed in with ChatGPT for GPT.
-Sign in to each CLI before use. Set `TICKERTAPE_AGY_HOST` to an SSH host with
-an authenticated `agy` installation when Gemini runs remotely. API-key clients
-and fallback routes are removed. Missing login, quota, or runtime access stops
-the request instead of switching to a billable provider.
-
-Use `effort` to see the active model's effort and supported levels, or
-`effort high` to change it for subsequent requests. This works in command and
-chat mode. Each model keeps its setting until the app exits. Gemini supports
-`low`, `medium`, and `high`; Claude and GPT also support `xhigh`. Flash maps
-those levels to thinking budgets of 1,024, 4,096, and 8,192 tokens.
-
-For GPT models, `fast` shows the current Fast mode setting; `fast on` enables
-it and `fast off` selects standard processing. The setting is off by default,
-is separate from effort, and stays with each model until the app exits.
-Fast mode selects Codex's subscription `service_tier="fast"`; turning it off
-selects `default`. Fast mode consumes more subscription quota
-([Codex speed settings](https://learn.chatgpt.com/docs/agent-configuration/speed)).
-The app does not report API-equivalent token prices as subscription charges.
-
-| Model | Provider | Thinking | Context | Notes |
-|-------|----------|----------|---------|-------|
-| Gemini 4 Argon | Google | low | 900K | Default chat model |
-| Flash 3.8 | Google | 1,024 | 900K | Fast answers, cheapest |
-| Sonnet 5.5 | Anthropic | adaptive | 1M | Balanced |
-| Opus 5.5 | Anthropic | adaptive | 1M | Strongest Opus reasoning |
-| Fable 5.1 | Anthropic | adaptive | 1M | Most capable — top reasoning |
-| GPT-6.1 Sol | OpenAI | low | 120K | Flagship GPT — low effort (already plenty for chat) |
-| GPT-5.6 Terra | OpenAI | high | 120K | Balanced GPT, cranked effort |
-| GPT-6 Luna | OpenAI | high | 120K | Fast, cheapest GPT, cranked effort |
-| GPT-6 Astra | OpenAI | medium | 120K | Most capable GPT |
-
-```
-ticker> model
-
-═══ MODELS ═══
-Type 'model' to list, 'model <name>' to switch.
-
-  ── GEMINI ──
-  ◆ argon        Gemini 4 Argon            gemini-4-argon                ✓
-    flash        Flash 3.8                 gemini-3.8-flash               ✓
-  ── CLAUDE ──
-    sonnet       Sonnet 5.5                  claude-sonnet-5-5                ✓
-    opus         Opus 5.5                  claude-opus-5-5                ✓
-    fable        Fable 5.1                 claude-fable-5-1               ✓
-  ── GPT ──
-    sol          GPT-6.1 Sol               gpt-6.1-sol                    ✓
-    terra        GPT-5.6 Terra             gpt-5.6-terra                  ✓
-    luna         GPT-6 Luna                gpt-6-luna                     ✓
-    astra        GPT-6 Astra               gpt-6-astra                    ✓
-```
-
-### Context System
-
-The AI assistant has a layered context system — it knows who you are, what the market is doing, and what you've told it before.
-
-**Live market context** — The system prompt is rebuilt on every chat session with current data: real-time quotes for all watched symbols (price, change, extended hours), technical signals (RSI, SMA position, distance from 52-week high), and portfolio thesis bucket groupings. If IBKR is connected, condensed account summaries (NLV, leverage, margin cushion, top holdings) from all configured accounts are fetched in parallel and injected. The AI can answer "what's my cushion?" or "which positions are above their 50-day?" without running any commands first. The subscription runtimes manage their own caching.
-
-**Slash commands** — Feed specific data to the AI mid-conversation: `/ta AAPL` runs technicals and injects the output, `/pos` pulls IBKR positions, `/acct` gets account summary. The AI analyzes the data in context.
-
-**Web search** — When the AI needs current information beyond what's in context, it searches the web automatically: Anthropic models use their native `web_search` tool (capped at 2 searches per turn to bound cost), Gemini grounds via Google Search, and other paths use DuckDuckGo search (`ddgs`). No manual trigger required.
-
-### Image Input
-
-Paste images into chat with `Ctrl+P` (macOS clipboard) or drop file paths into
-the input. GPT and Claude subscription runtimes accept images. Gemini's
-headless subscription input currently accepts text only; image requests fail
-with an explicit message rather than switching to an API. The image cap is
-2 MB per image (`TICKERTAPE_MAX_IMAGE_BYTES` overrides it).
-
-### Memory
-
-Memories are persistent facts that survive across sessions, model switches, and history compaction. Stored as JSON on disk and injected into every model's system prompt, so all nine models share the same knowledge base.
-
-**Three ways to save:** `memory add <text>` from the command bar, `remember <text>` while in chat mode (handled locally), or just tell the AI conversationally — "remember that AAPL reports Jan 30" — and it saves automatically.
-
-<p align="center"><img src="assets/demo-chat-memory.png" width="85%" /></p>
-
-**Deleting works the same way** — `memory delete 5` from the command bar, or tell the AI "forget memory 5" in conversation.
-
-**Compaction** — `memory compact` sends all stored memories through Flash 3.8, which distills them into a smaller set of consolidated facts. Useful when you've built up 20+ memories and want to keep the signal without the noise.
-
-```
-ticker> memory
-
-═══ MEMORIES ═══
-
-  #1  AAPL reports Jan 30, after hours                   2026-03-28
-  #2  Sold 200 MSFT at $420 for rebalancing              2026-03-26
-  #3  Earnings week — no new positions until Friday      2026-03-24
-  #4  TSLA support at $180, resistance at $210           2026-03-22
-
-memory <ID> (full text) · add <text> · delete <ID> · compact
-```
-
-### History
-
-Conversation history persists to disk across sessions and model switches. `history` shows a paginated view of past exchanges with per-model cost breakdown.
-
-```
-ticker> history
-
-═══ HISTORY (12 turns, page 1/2) ═══
-  ~8.2K tokens · subscription
-
-  1  Q: what do you think about AMZN's setup going into earnings?
-     sonnet ▸ AMZN looks solid — RSI 52 is neutral, sitting right on the 50d...
-
-  2  Q: compare it to GOOGL
-     sonnet ▸ Both are mega-cap tech but with different growth drivers...
-
-history 2 · peek N · search <term> · delete N[-M] · compact · clear
-```
-
-`history search <term>` finds old conversations. `history delete 3` removes a single exchange. `history delete 6-10` removes a range.
-
-**Compaction** — `history compact` sends the full history through Flash 3.8, which produces a concise summary. The original messages are replaced with a single summary entry. The AI retains the knowledge without burning tokens re-reading 50 old exchanges.
-
-### Chain-of-Thought, Search & Token Usage
-
-Subscription replies appear when a CLI completes its structured turn. Local
-tool activity appears between turns. Native reasoning details depend on the
-runtime and are not fabricated when unavailable.
-
-**Native web search** is provided by the selected subscription runtime;
-application tools still fetch quotes, news, account data, and saved memos.
-
-**Generation footer** stays above the command input while chat runs: activity, model, `↑` input tokens, `↓` output tokens, `◷` elapsed time, and `↯` average output tokens/second. A compact final line stays beneath the answer. Counts appear only when the subscription runtime reports them; `—` means unavailable, not zero. Throughput includes waiting and tool time. Unavailable token and cost fields stay unknown. Narrow terminals omit throughput and cache details first. Toggle live and final footers with `Ctrl+T`; the setting persists.
-
-**Context caching** is managed by the subscription runtimes. The app has no
-explicit-cache API route or per-hour API storage charge.
-
-A random thinking placeholder (from a pool of ~80 words including "Catfishing", "Moonwalking", "Glazing") shows while waiting for the first token.
-
-```
-Q: what's happening with the TSMC arizona fab timeline?
-Moonwalking...
-Analyzing the Request
-    The user is asking about TSMC's Arizona fab construction
-    timeline. I should search for the latest updates on the
-    N4P process node ramp and any delays or policy changes.
-Searching the Web
-    🔍 Searching: "TSMC Arizona fab timeline 2026"
-    🔍 Searching: "TSMC N4P production ramp update"
-Synthesizing
-    The latest reports confirm first silicon on the N4P node
-    ahead of schedule. This is significant for the domestic
-    semiconductor supply chain buildout...
-
-A:
-TSMC's Arizona Fab 1 hit first silicon on the N4P node two weeks
-ahead of the revised schedule. Yield rates are tracking at 92%,
-which is competitive with Tainan. Fab 2 (N3E) broke ground last
-month with a 2028 target. The CHIPS Act second tranche disbursed
-$2.1B in March, removing the funding overhang.
-
-┌───────────────────────────┐
-│ ↑ 3,156t  ↓ 809t  ◷ 10.4s │
-└───────────────────────────┘
-```
-
-### Journal & Resume
-
-`journal save [N]` captures the last N chat exchanges losslessly to a persistent journal — useful for archiving analysis or trade rationale. `journal` lists saved entries with timestamps.
-
-`resume` replays the tail of chat history (~3000 chars) with full markdown rendering, so you can pick up where you left off after restarting.
-
-### Auto News Context
-
-Mentioning a watchlist ticker in chat automatically fetches its recent headlines and injects them into the AI's context. No manual `/news` command needed — just say "what do you think about AAPL" and the model sees the latest headlines alongside its market data.
-
-### Agent Tools
-
-The AI can call ticker-tape functions directly when you ask about specific data — no slash commands needed. Ask "what's MSFT's RSI?" and the model calls `get_technicals(MSFT)` to fetch real-time indicators, then analyzes the result. Ask "set an alert when NVDA crosses 200" and it calls `set_alert` — the alert lands in the same store the `alert` command uses. "What did my last AAPL memo say" searches the analyze archive. 19 tools across all nine models.
-
-| Tool | What It Does |
-|------|--------------|
-| `get_quotes` | Fresh real-time quotes for any symbols |
-| `get_technicals` | RSI, SMA, MACD, Bollinger, ATR, volume ratio |
-| `get_news` | Recent headlines with age |
-| `get_fundamentals` | P/E, margins, growth, market cap |
-| `get_chart` | Price history (configurable period/interval) |
-| `get_intraday` | Today's 5-min bars with VWAP |
-| `ibkr_get_positions` | Portfolio positions with P&L |
-| `ibkr_get_account_summary` | Account NLV, margin, buying power |
-| `ibkr_briefing` | Risk dashboard with margin metrics |
-| `ibkr_stress_test` | Stress test under configurable scenarios |
-| `ibkr_what_if` | Simulate trade: margin impact, cushion change |
-| `get_earnings_surprises` | Historical EPS beat/miss across watchlist |
-| `get_briefing` | Morning briefing: portfolio, macro, movers, earnings |
-| `search_memos` | Search the analyze-memo archive (claims + bodies) |
-| `set_alert` / `delete_alert` / `list_alerts` | Manage price/RSI/SMA/volume/cushion alerts |
-| `memory_add` / `memory_delete` | Save/delete persistent memories |
-
-Tools are defined once in a provider-agnostic registry and translated to each provider's native format (Anthropic tool_use, Gemini function_declarations, OpenAI function tools). Execution is local — the model requests a tool, ticker-tape runs it in Python, feeds the result back, and the model continues with analysis. Tool rounds are capped per turn, so a confused model can't loop forever.
-
-Write tools (`set_alert`, `memory_add`, deletes) validate and normalize arguments before persisting — junk operators or unknown alert types are refused with an error the model can correct, never silently stored as dead alerts.
-
-**Broker access is strictly read-only.** The tool layer has no order-placement capability at all — IBKR tool names are checked against a hard whitelist (positions, account summary, briefing, stress test, what-if) before any network call. No model output can place, modify, or cancel an order through this code path.
-
-### Clipboard
-
-`copy` captures the current screen content to your system clipboard (macOS `pbcopy`, Linux `xclip`, WSL `clip.exe`). `copy 20` for just the last 20 lines. Falls back to file export if no clipboard tool is available.
-
-### Keyboard Shortcuts
-
-| Key | Context | Action |
-|-----|---------|--------|
-| `F1` / `F2` / `F3` / `F4` | Anywhere | Help / dashboard / markets / earnings |
-| `PgUp` / `PgDn` | Anywhere | Page output without leaving the command input |
-| `Ctrl+Home` / `Ctrl+End` | Anywhere | First / latest output |
-| `Ctrl+O` | Chat | Toggle chain-of-thought display |
-| `Ctrl+T` | Chat | Toggle generation footer |
-| `Ctrl+P` | Chat | Paste clipboard image (macOS) |
-| `Ctrl+N` | Chat | New line in input |
-| `c` | Ticker | Toggle compact mode |
-| `l` | Ticker | Switch language (en/zh) |
-| `←` / `→` | Time travel | Scrub one day back / forward |
-| `Home` | Time travel | Return to live |
-
-## Deep-Dive Analysis
-
-`analyze <target>` (alias: `dive`) runs a doc-grade memo via Gemini 4 Argon with application tools and subscription web search. Completed memo turns appear in the terminal and are archived to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter.
-
-```
-analyze TSLA                    # symbol dive
-analyze rotation                # thesis dive (requires thesis key in config)
-analyze MSFT earnings             # symbol with angle hint
-analyze "why is XLU up"         # freeform — nests under _freeform/<hash>/
-```
-
-Each memo follows a fixed six-section structure: **Context**, **What Changed Since Last Memo**, **Current Read**, **Risks / Disconfirming Evidence**, **Suggested Actions**, **Sources**. The system prompt forces a `High/Medium/Low conviction` phrasing so conviction level and key claim can be extracted into front-matter — this lets the index (`_index.json`) surface a timeline view without re-reading every memo.
-
-Prior memos for the same target are loaded into the system prompt (newest 5), so re-running `analyze TSLA` a month later produces a "since last memo" update rather than a restart. Backend errors are caught and written as error memos (conviction=unknown) so failures stay auditable in the archive.
-
-### Archive Navigation
-
-Read what you've written. All commands are disk-only — no AI calls, no tokens spent.
-
-```
-memos                           # list all slugs (memo count + newest date)
-memos TSLA                      # list TSLA memos, newest first, with index + conviction
-memo 1                          # reopen memo #1 from the last listing
-memo latest                     # reopen the newest memo across the archive
-memo latest TSLA                # reopen the newest memo for a slug
-```
-
-Slug resolution: uppercase → symbol (`memos tsla` → `TSLA`), lowercase → thesis, `_freeform/<hash>` → freeform. Unknown slug shows a dim not-found message; out-of-range `memo N` reports the last listing size so you can retry.
-
-The reopen view starts with a banner (target · date · conviction-colored badge · key claim · angle · model · prior-memo count), then streams the body through the same markdown renderer used for a live analyze. Error memos surface with a `UNKNOWN` dim badge so failed runs remain visible in the timeline.
-
-## Status Bar
-
-Scrolling top bar with global indices (S&P, Nasdaq, HSI, VIX, WTI, Brent, Gold, Silver, Natgas) and local ET clock. Character-level scroll using Rich `Text` object slicing to preserve per-segment coloring. Off-hours swaps to futures tickers (ES=F, NQ=F). VIX and natgas color-coded by absolute level (green/yellow/red thresholds). NYSE holiday detection with orange "HOLIDAY" tag.
-
-## Sidebar
-
-Real-time watchlist quotes with refresh flash indicator. IBKR P&L section (daily/unrealized/realized aggregated across accounts, 30s refresh). Risk section (cushion, leverage, NLV from primary account, 60s refresh) with color-coded thresholds. Earnings calendar in the Pulse section.
-
-## IBKR Integration
-
-Multi-account MCP client over streamable HTTP. Two accounts on the same or separate IB Gateways, configured via environment variables. Per-account labels with gateway-down detection. Compact column formatting with currency filtering and FX conversion (USD/CAD, USD/JPY, USD/EUR, USD/CNY, USD/TWD, CAD/HKD, CAD/CNY). Consolidated view renders three blocks — per-account summaries plus a "Combined" cross-account roll-up with shared NLV/leverage/margin metrics.
-
-| Command | What it shows |
-|---------|--------------|
-| `/pos` | Positions table with cost basis, P&L, weights, daily P&L summary |
-| `/acct` | Account health: NLV, margin, buying power, cushion, leverage |
-| `/pnl` | Daily/unrealized/realized P&L with daily return % |
-| `/risk` | Full risk dashboard: health, concentration, alerts, VaR |
-| `/trades` | Today's executions grouped by symbol, VWAP, commissions |
-| `/orders` | Open/pending orders |
-| `/detail SYM` | Single position deep dive: cost, weight, P&L, margin, performance |
-| `/margin` | Margin summary, `/margin SYM` headroom, `/margin SYM QTY` what-if |
-| `/stress` | Stress test: preflight, drawdown curve, overnight gap risk |
-| `/beta` | Portfolio beta vs SPY with per-position breakdown |
-| `/corr` | Pairwise correlation matrix |
-| `/sector` | Sector exposure breakdown with HHI |
-| `/ibkr` | Consolidated cross-account view with FX conversion |
-
-```
-═══ POSITIONS (U12345678) ═══  14:32:05 ET
-
-         Shares      Cost     Price         Value             P&L    Wt%
-──────────────────────────────────────────────────────────────────────
- AAPL       500 $  185.20 $  198.45    $99,225.00    +   6,625.00  28.3%
- MSFT       300 $  378.50 $  412.30   $123,690.00    +  10,140.00  25.1%
- GOOGL      400 $  155.80 $  168.92    $67,568.00    +   5,248.00  19.4%
- AMZN       250 $  178.40 $  192.15    $48,037.50    +   3,437.50  13.7%
-
- Total Market Value              $350,482.50 USD
- Daily P&L                       +$2,841.20
- Daily P&L %                     +0.82%
-```
-
-## Stack
-
-- `textual` — TUI framework, reactive properties, CSS styling
-- `rich` — Markup rendering, Text objects for scrolling tape
-- `yfinance` — Market data, technicals, earnings, insider transactions
-- `ddgs` — DuckDuckGo web search
-- `mcp` — IBKR MCP client (streamable HTTP, multi-account)
-- `httpx` — Async HTTP transport
-- `peewee` — SQLite ORM for NLV history and earnings persistence (WAL mode)
-- `pyyaml` — Analyze memo front-matter serialization
-- `pytest` — run `python -m pytest --collect-only -q` for the current count; coverage includes data layer, formatters, screens, chat, tool registry + agent write tools, demo mode, pricing conventions, journal, memory tags, MCP pipeline, smart alerts, db persistence, analyze orchestration, archive I/O, archive views, risk cockpit, cost of carry, semantic recall, catalyst calendar, backtest engine + FX layer + Flex import, time travel, event feed, decision cards, fill notes, shadow books, breakers
-
-## Demo
-
-Multi-model AI chat with web search, chain-of-thought, and model switching mid-conversation.
-
-<img src="assets/chat-multi-model.png" width="75%" />
-
-Fully integrated Chinese language support with CJK-aware column alignment.
-
-<p>
-  <img src="assets/dashboard-en.png" width="49%" />
-  <img src="assets/dashboard-zh.png" width="49%" />
-</p>
-
-## Running it
+## Install
 
 The Python sources and tests are encrypted with git-crypt (see `.gitattributes`),
-so running the app needs an unlocked checkout. From one:
+so running the app needs an unlocked checkout.
 
 ```sh
 python3 -m venv venv
@@ -429,110 +16,93 @@ venv/bin/ticker-tape          # the terminal app
 ./tape --help                 # headless CLI; same as venv/bin/ticker-tape-cli
 ```
 
-## Changelog
+Python 3.10 or newer. `ticker-tape --demo` (or `TICKERTAPE_DEMO=1`) runs on a fake
+market and account from `data/demo/`, with no network. Demo mode sanitizes the system prompt of real context and seeds
+NLV history, alerts, a memo and chat history.
 
-**v4.3.0** — **Command navigation.** Company profiles are opt-in with `SYM --profile`.
-Symbol-specific views share a flag grammar. Help opens a compact topic index,
-with focused references and an explicit `help all` view. The scrolling event
-banner above the command input is removed.
+## Usage
 
-**v4.2.2** (2026-09-27) — **Responsive terminal layout.** Sidebar visibility follows available width; cached output reflows without refetching, quote fields wrap in groups, and the static index bar keeps complete quotes. The chat composer is capped by terminal height and scrolls long drafts internally. Resizing preserves drafts, cursor, focus, and the saved density preference. F2/F3/F4 open dashboard/markets/earnings; PgUp/PgDn and Ctrl+Home/End navigate output from the command input.
+Type commands at the `ticker>` prompt. `h`, `help` or `?` opens an index;
+`help symbols|market|watchlist|portfolio|research|chat|keys` gives a focused
+reference and `help all` lists every topic.
 
-**v4.2.1** (2026-09-26) — **Live chat footer.** A compact animated metrics line stays above the command input during generation, then becomes a single line beneath the answer. Includes model, reported input/output tokens, elapsed time, and average output throughput. Gray terminal glyphs, narrow-layout handling, persisted visibility, and error/cancellation cleanup. Gemini and Anthropic totals now include every tool round; OpenAI publishes cumulative usage after each request.
+Symbol views take flags: `SYM --profile`, `--ta`, `--chart`, `--intraday`,
+`--options`, `--news`, `--insider`, `--dividends`, `--short`, `--ratings`,
+`--impact`. A plain symbol shows metrics only. Existing view aliases continue to
+work. `--insider` shows type, value and shares.
 
-**v4.2.0** (2026-09-22) — **The July roadmap.** `layout` decides which sidebar sections show and in what order (`layout pulse calendar pnl risk`, `layout add earnings`, `layout rm risk`, `layout reset`), persisted, with two new ambient sections: a **calendar** countdown of the next six merged catalyst/macro rows and **earnings**, the soonest prints in the watchlist with the EPS estimate. `spark vol` swaps every row's price sparkline for a volume histogram coloured by each bar's close direction, in the sidebar and both thesis views; `spark price` restores it. The earnings-reaction parity check needed nothing: `impact` already carried beat rate, streak, average surprise and the average close-to-close move.
+| Command | Does |
+|---------|------|
+| `brief` / `brief ai` | Morning briefing, with AI synthesis |
+| `whatif [buy/sell] SYM QTY` | IBKR what-if: margin, concentration, cushion |
+| `surprises` | Watchlist EPS beat/miss history, price reaction and beat streaks |
+| `bt [SYM] [ccy CAD\|USD]` | Replay `data/fills.csv` against a benchmark (`docs/backtest.md`) |
+| `python flex_import.py <export.csv>` | Seed the ledger from an IBKR Flex Query export |
+| `shadows` | Replay counterfactual ledgers in `data/shadows/*.csv` |
+| `tt [date]` | Freeze the terminal as of a past date; `←`/`→` scrub, `Home` returns |
+| `breakers` / `tw` | Render an external thesis-breaker checklist (read-only); health headline is INTACT or BREACHED |
+| `note` | One-line notes on fills |
+| `spark vol` / `spark price` | Volume or price sparklines (persisted) |
+| `layout pulse calendar pnl risk` | Sidebar sections and order, persisted; `layout add earnings`, `layout rm risk`, `layout reset` |
+| `wire top` / `wire latest` | Rank the news-wire feed by priority or newest first (persisted) |
+| `event fomc\|N\|SYM` | Calendar row workspace |
+| `sig add NAME RULE… [rank FIELD]` | Saved rule sets over technicals, run over the watchlist |
+| `opt SYM` | Options chain with expected move, IV, skew, term structure |
+| `catalyst` / `cx` | Catalyst calendar merged with the macro calendar; `catalyst SYM` filters to one name |
+| `cockpit` / `hf`, `carry`, `timeline`, `impact` | Risk, cost of carry, NLV history, earnings reactions |
+| `alert`, `wl`, `memory`, `history`, `journal`, `resume` | Alerts, watchlist, chat memory (`memory ID` shows one in full; `add`, `delete`, `compact`), chat history, journal, resume |
+| `copy [N]` | Copy the current screen to the clipboard; `copy 20` copies the last 20 lines |
+| `/pos` `/acct` `/pnl` `/risk` `/trades` `/orders` `/detail SYM` `/margin` `/stress` `/beta` `/corr` `/sector` `/ibkr` | IBKR views; `/ta SYM` feeds technicals to chat |
 
-**v4.1.0** (2026-09-22) — **Feed honesty.** Every quote is stamped when its number actually landed and the stamp survives the last-known-good fallback, so a row whose print is late wears a dim age and a cache fallback wears a red `STALE 7m`; the sidebar title carries a `FRESH` / `RECOVERING 45s` / `DELAYED 6m` chip that never calls a cold start delayed. `wire top` ranks the fragwire feed by event type, watchlist relevance, thesis weight, source credibility and age decay, live rows first with transcript chatter collapsed to the newest chunk per session; `wire latest` restores newest-first and the choice persists.
+Deep-dive memos: `analyze <target>` (alias `dive`) writes to
+`data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter. Targets are a
+symbol, a thesis key from config, or quoted freeform text; an angle hint may follow
+a symbol (`analyze MSFT earnings`) and is recorded in the memo banner and front-matter.
+Memos run on Gemini 4 Argon (the chat default) with application tools and subscription web search. `memos [SLUG]`,
+`memo N` and `memo latest [SLUG]` reopen archived memos from disk.
 
-**v4.0.0** (2026-09-22) — **Web parity.** The analyst reads built and proven on ticker-tape-web come home, all as pure functions over data the app already fetches. `opt SYM` now leads with what the market is pricing: the ATM-straddle expected move in dollars and percent, measured against the name's typical realised earnings reaction for a rich/fair/cheap verdict, plus ATM IV, 25-delta skew from Black-Scholes deltas on each contract's own IV, the IV term structure across expiries spread along the curve, and volume-over-open-interest outliers with the number that made them unusual; the chain fetch also stops raising on unquoted contracts and drops Yahoo's sub-1% placeholder vol. **Signal boards** (`sig`) are saved screens: `field<value`, `field:low..high`, `above:sma200`, AND-combined with a rank field, run over the watchlist into match / pending / miss bands where a symbol whose inputs have not landed is reported as pending rather than dropped; matches save as a group, and entry arms the closest single alert. The **event workspace** (`event`) opens any calendar row, macro or catalyst, into a plain-language read in both locales, the public instruments it touches with their session move, and prior / consensus / actual with the surprise once the print is in.
+Chat: `model [name]` lists or switches models, `effort [low|medium|high|xhigh]`
+sets reasoning effort (no argument shows the active model's effort and supported
+levels; works in command and chat mode; applies to subsequent requests),
+`fast [on|off]` sets Codex Fast mode for GPT models, which uses more subscription
+quota ([Codex speed settings](https://learn.chatgpt.com/docs/agent-configuration/speed)).
+Model API ids: gemini-4-argon, gemini-3.8-flash, claude-sonnet-5-5, claude-opus-5-5,
+claude-fable-5-1, gpt-6.1-sol, gpt-5.6-terra, gpt-6-luna, gpt-6-astra.
+Chat and analysis run only through subscription CLIs: `agy` (Gemini), `claude`
+(Claude), `codex` signed in with ChatGPT (GPT). Sign in to each first. Missing
+login or quota stops the request; there is no API-key fallback. The AI can call
+local tools (quotes, technicals, news, alerts, memory, memos, read-only IBKR
+views); `set_alert` writes to the same store as the `alert` command; IBKR tools are whitelisted to read operations and cannot place orders.
 
-**v3.9.0** (2026-08-11) — **The wire release.** The fragwire panel catches up to the server: cross-outlet story clustering with ×N badges and `wire story N` to unpack members, source-credibility pips, plain-English publication bylines, `wire read N` on-demand article extraction, long-form morning-brief rendering with CJK-aware wrapping, and Chinese output across the whole wire surface (headlines, statuses, health — the last locale leak). Alerts gain in-place editing (`alert edit`) with a persisted FIRED state; the watchlist drops its forced alphabetical sort in favour of user order with `wl up/down/move` and a one-line breadth summary. Startup quotes now come from one batched request instead of a per-symbol trickle. The economic calendar carries the full 2027 schedule plus derived quad-witching dates, guarded by a test that fails 60 days before the calendar runs dry. Lookup adds a company Profile block and a stale-quote badge.
+| Key | Context | Action |
+|-----|---------|--------|
+| `F1` `F2` `F3` `F4` | Anywhere | Help / dashboard / markets / earnings |
+| `PgUp` `PgDn`, `Ctrl+Home` `Ctrl+End` | Anywhere | Page output; first / latest output |
+| `Ctrl+O` / `Ctrl+T` | Chat | Toggle chain-of-thought / generation footer |
+| `Ctrl+P` | Chat | Paste clipboard image (macOS) |
+| `Ctrl+N` | Chat | New line in input |
+| `c` / `Ctrl+K` | Ticker | Toggle compact mode |
+| `l` | Ticker | Switch language (en/zh) |
 
-**v3.7.3** (2026-07-22) — **Compact banner persistence.** The final compact-thesis refresh now restores the startup banner after clearing the interim render, preserving the MacBook regression fix across the app-mixin refactor. The headless CLI banner and command headings now resolve and display the same release version as the TUI.
+## Configuration
 
-**v3.7.2** (2026-07-22) — **Correctness hardening.** Backtest return, alpha, and drawdown calculations now remove later capital contributions instead of reporting deposits as gains; the benchmark receives the same dated cash flows. Shadow books retain ledger currency metadata and normalize every fill and bar into the configured report currency before comparison. Earnings reactions now distinguish before-market from after-market reports, include already-reported same-day BMO events, and refresh existing SQLite rows when corrected reaction data arrives.
+Copy `.env.example` to `.env`.
 
-**v3.7.1** (2026-07-10) — **GPT-5.6 tiers.** Swapped the two GPT slots for the GPT-5.6 lineup: **Sol** (flagship), **Terra** (balanced), **Luna** (fast/cheapest), plus the prior flagship **5.5** kept. Removed GPT-5.4 mini. The registry keys *are* the switch names — `model sol|terra|luna|5.5`. Effort is inverted vs tier: Sol runs `low` (the flagship is already overkill for a chatbot — save the tokens), Terra/Luna run `high` to make the cheaper tiers punch up; 5.5 stays `medium`. Ten models now; the cost breakdown folds all four GPT tiers into one entry by provider, so it needed no change. Pricing per 1M tokens: Sol $5/$30, Terra $2.50/$15, Luna $1/$6, 5.5 $5/$30.
+| Variable | Meaning |
+|----------|---------|
+| `TICKER_SYMBOLS` | Comma-separated watchlist |
+| `IBKR_MCP_URL` | IBKR MCP endpoint (streamable HTTP) |
+| `TICKERTAPE_AGY_HOST` | SSH host with an authenticated `agy`, if Gemini runs remotely |
+| `CHAT_MODEL` | Default chat model |
+| `TICKERTAPE_MAX_IMAGE_BYTES` | Per-image cap for chat images (default 2 MB) |
+| `TICKERTAPE_DEMO` | `1` enables demo mode |
 
-<details>
-<summary>Older releases</summary>
+The carry rates `MARGIN_RATE_PCT`, `CASH_YIELD_PCT` and `FX_CARRY_PCT` are
+env-overridable; the benchmark (`config.RS_BENCHMARK`) and report currency
+(`config.BACKTEST_CCY`) are set in `config.py`. State persists under `data/` (gitignored
+except `data/demo/`). Image input: GPT and Claude runtimes only.
 
-**v3.7.0** (2026-07-07) — **Decision surfaces: breakers, time travel, event tape, decision cards, shadow books.** Five features that turn the terminal from a data display into a decision instrument. **Breakers** (`tw`): read-only glass over the external breaker watcher — health headline (INTACT/BREACHED), fired/holding grouping, catalyst calendar, rotation estimate, per-breaker qtr coverage badges; the watcher owns the discipline, the terminal renders it. **Time travel** (`tt [date]`): the whole terminal AS OF a past date — that day's closes, book reconstructed from the fills ledger via the backtest engine's `PositionBook` (same matched-sell/average-cost semantics), `←`/`→` day scrubbing, `Home` = live. **Event tape** (`Ctrl+E`): a bottom strip of recent trading events (alerts, movers, calendar) on a deduped ring buffer. **Decision cards**: a fired alert attaches a pre-computed playbook — e.g. a trim ladder sized from live IBKR state to restore a target cushion — plus `note`, one-line thesis annotations on fills stored in a sidecar that survives ledger re-imports. **Shadow books** (`shadows`): standing counterfactual ledgers (`data/shadows/*.csv`) replayed through the same engine over the same bars, making the running dollar cost of past decisions a first-class view. Also: backtest data-quality hardening (split detection in the ledger window, raw unadjusted closes, deduped FX caveats).
-
-**v3.6.0** (2026-07-07) — **Backtest / thesis replay (`bt`).** Replays the book's realized fills against a benchmark: ASCII equity curve with entry/exit marks, book vs buy-&-hold return vs alpha, max drawdown. Fills come from a local CSV ledger (`data/fills.csv`) because IBKR's execution API only reaches ~7 days back; `flex_import.py` converts a multi-year IBKR Flex-Query export into the ledger in one command (column aliases, signed-qty side inference, CAD-listing suffixes). Mixed CAD/USD books are normalized to one report currency (`bt [SYM] ccy CAD|USD`, default `config.BACKTEST_CCY`) with each amount converted at its own date's USDCAD rate — never today's, never a fabricated parity rate. Pure engine (`backtest.py`), data layer (`backtest_data.py`), FX layer (`backtest_fx.py`), all unit-tested; demo-seeded.
-
-**v3.5.0** (2026-07-02) — **Catalyst calendar (`catalyst` / `cx`).** A forward calendar of per-symbol events beyond earnings — conferences (GTC, OFC), product launches, policy/export-control dates, supply cycles, capex days — the catalysts a thesis turns on that no earnings feed carries. Catalysts persist in a JSON store and the view merges them with the macro econ calendar (FOMC/CPI/NFP/GDP/PCE) into one date-sorted, countdown-colored list; `catalyst SYM` filters to one name. AI chat maintains it via two new write tools (`add_catalyst`, `list_catalysts`), so you can say "add NVDA's GTC keynote on March 17" mid-conversation. Pure formatter (`catalyst.py`), bilingual, demo-seeded.
-
-**v3.4.0** (2026-07-02) — **Semantic recall (`recall` chat tool).** Chat could only keyword-match memos; now it can find them by meaning. Memos and the trade journal are indexed into a dedicated **vecgrep** corpus (the local-first Qdrant + bge-m3 engine), and a new `recall` agent tool queries it — "what was my take on X, and did it play out" pulls the semantically-nearest past memos/journal entries regardless of wording. The journal (JSON) is rendered to a markdown shadow so it indexes alongside the memo files; reindex runs before each recall and is incremental on vecgrep's side. Degrades to the keyword memo search if vecgrep is unreachable, so a chat turn never hard-fails. Demo mode never touches the real corpus (keyword-only). Config: `VECGREP_BIN`, `VECGREP_CORPUS`.
-
-**v3.3.0** (2026-07-02) — **Cost-of-carry dashboard.** New `carry` command: what the book costs to hold per year. Margin interest (config rate × the debit balance) netted against forward dividend income and any cash-sweep credit, shown as annual $, per-day $, and % of NLV, plus the breakeven return on the borrowed slice. The gateway exposes the debit balance and the **actual accrued interest** but not the forward rate, so the modeled interest is rendered beside IBKR's real accrual as a reality check — if they diverge, the config `MARGIN_RATE_PCT` is stale. Handles both leveraged (debit) and cash-positive books. Rates live in `config.py` (`MARGIN_RATE_PCT`, `CASH_YIELD_PCT`, `FX_CARRY_PCT`), env-overridable. Pure formatter (`screens/carry.py`), Decimal money math, parallel fetch, bilingual, canned demo data.
-
-**v3.2.0** (2026-07-02) — **Risk cockpit.** New `cockpit` command (alias `hf`) composes every margin and risk number onto one screen: a traffic-lit verdict header (cushion, distance-to-forced-liquidation), account margin state, a per-position margin-treatment table, VaR / vol / beta / drawdown, and a survivability section. The margin table derives each position's **maintenance requirement from a SELL-all what-if** (account maint before minus after) rather than assuming a flat rate — so a position carrying elevated house/concentration margin is measured from the broker's own engine and flagged when its maint/value ratio runs above the book. Every section degrades independently when a tool is unavailable; canned demo data included. Position-table parsing is now header-driven (locates the Value/Weight columns by name) so it reads both the live and demo table layouts. Pure formatter in `screens/cockpit.py`, parallel fetch in the app worker, bilingual.
-
-**v3.1.1** (2026-06-11) — **Lineup trim + cost-breakdown fix + ticker scroll repaint.** Dropped **Haiku 4.5** — too far behind Sonnet 4.6 / Opus 4.8 / Fable 5 to earn a slot (eight models now). Set **Fable 5** to `effort: medium` (adaptive thinking is steered by effort, not a token budget — medium trims spend on the 2x-cost model). Rewrote the `history` cost breakdown: it was a hardcoded list that **silently dropped Fable's cost** and showed `$0.00` for unused models — now it shows only models with spend this session, folds the GPT models into one entry (like Gemini), and lists Anthropic models individually. Fixed the **scrolling ticker tape freezing under tmux** — the marquee advanced its offset internally but the screen never repainted, because Textual coalesces the tiny per-tick (1-cell) label updates and tmux/SSH drop them; the tick now forces an explicit `refresh()` each frame.
-
-**v3.1.0** (2026-06-10) — **Fable 5 + adaptive thinking.** Added Claude **Fable 5** (`claude-fable-5`) as the top model — 1M context, $10/$50 per MTok, the most capable of the lineup (now nine models across three providers). Fable 5 and Opus 4.8 use **adaptive thinking** (`thinking: {type: "adaptive"}`); the Claude call path now routes by a `thinking_mode` flag instead of always sending the legacy `budget_tokens` form, which 400s on adaptive-only models. Fixed **Opus 4.8** along the way — it carried the same latent `budget_tokens` config and would 400 on thinking turns; switched it to adaptive and corrected its context window to 1M. Also surfaced the previously-undocumented **Flash 3.5** (`gemini-3.5-flash`) in the model list.
-
-**v3.0.0** (2026-06-09) — **Agent tools + demo mode.** Tool layer extracted to `chat_tools.py` and extended to 19 tools across all seven models / three providers. New tools: `get_quotes` (fresh quotes on demand), `search_memos` (analyze-archive search), `set_alert`/`delete_alert`/`list_alerts`, `memory_add`/`memory_delete` — write tools validate and normalize args before persisting (GPT's "above"/"below" operators normalized, junk alert types refused instead of stored dead). Hard read-only IBKR whitelist: no tool name outside the read set is ever forwarded to the broker gateway — refusal happens before any network call; the layer has no order-placement capability. OpenAI streaming tool-call fixes (args accumulated by item_id, conversation preserved across tool rounds); Gemini translator type fixes. New demo mode (`ticker-tape --demo` / `TICKERTAPE_DEMO=1`): deterministic fake market + fake $500K account on generic tickers, all data under `data/demo/`, zero network, system prompt sanitized of all real context, seeded NLV history/alerts/memo/chat — 51 screens verified.
-
-**v2.7.0** (2026-06-09) — **P/L correctness.** New `pricing` module is the single source of truth for change/P&L/drawdown math; quotes, briefing, sidebar, lookup, status bar, market pulse, sectors, commodities, valuation, timeline, and IBKR P&L all route through it. Daily change % baselines on previous regular-session close, extended-hours % on last regular-session close, daily P&L % recomputed from raw P&L over NLV, NLV drawdown clamped at 0. Zero/negative/missing baselines now skip or mark the row stale instead of rendering a fake 0% or sign-flipped figure.
-
-**v2.6.1** (2026-04-19) — Archive navigation. `memos` lists archived slugs (count + newest date); `memos <slug>` shows each memo's date, conviction level, and key claim with an index column. `memo <N>` reopens memo #N from the last listing; `memo latest [slug]` jumps to the newest. Banner shows date, conviction, angle, model; body rendered through _md_to_rich so it flows like a fresh analyze. Read-only — no AI calls, no archive modification.
-
-**v2.6** (2026-04-19) — **Deep-dive analysis.** New `analyze <target>` command (alias: `dive`) runs doc-grade memos via Gemini with application tools and subscription web search. Memos archive to `data/analyses/{slug}/{YYYY-MM-DD-HHMMSS}.md` with YAML front-matter; prior memos load into the system prompt for "since last memo" continuity. Routes symbol / thesis / freeform targets under their own slug. Conviction level extracted into front-matter for timeline views. Error memos written on backend failure so failures stay auditable. Chat rendering: negative lookahead added to cross-line-bold fix so adjacent bold-prefixed list items stop collapsing onto one line (Gemini dense-list regression).
-
-**v2.5.5** (2026-04-16) — View polish sweep. **Thesis compact**: %H / %R pulled left 1 cell each. **Commodities**: name column tightened 3 cells. **Correlation matrix**: proper heatmap — amber band for 0.6-0.8 ("hidden beta" zone), dim amber for 0.4-0.6, white 0.2-0.4; legend updated. **Earnings surprises**: full rewrite — $ sign in its own column with `-$` leading negatives, Beat %/detail treated as fixed-width pair so subsequent columns don't shift, all percentages right-justified on visible width not markup-wrapped length. **Valuation screen**: column spacing tightened so the row no longer spills off ~80-char panes (inter-column gap 2→1, Chg% built from raw pct not `color_pct` helper). **IBKR consolidated view**: third purple "Combined" section for cross-account NLV/Leverage/Margin Util, positions table P&L sign aligned in its own column (all +/- glyphs in one vertical line regardless of magnitude), column headers shifted left to align with data, USD/TWD added as relevant FX pair. **P&L view**: stripped redundant "of NLV" suffix from daily P&L parenthetical. **Briefing AI**: `brief ai` now routes directly through Gemini Flash backend instead of the user's currently-selected chat model (was broken if user was on non-Gemini model).
-
-**v2.5.4** (2026-04-16) — i18n polish: briefing portfolio/macro/movers/earnings labels, IBKR account summary labels, and chat help menu all now translate (30+ new keys). CJK-aware column padding via `pad()` so Chinese labels preserve visual alignment. README changelog caught up.
-
-**v2.5.3** (2026-04-15) — IBKR view polish (P&L formatting consistent across all views, `+1,234.56` no `$`, 2-space left pad on consolidated). Account summary adds excess liquidity + buying power; CAD/CNY FX pair. Morning briefing expanded to 40-60 lines with news headlines per top mover, sector snapshot, 10-indicator macro (DXY, 10Y, BTC added), EPS estimates on earnings. Status bar CJK fix — cell-aware slicing via `unicodedata.east_asian_width()` so Chinese chars (金 etc.) don't get cut off in scrolling tape. 30+ new i18n keys covering thesis indicators, impact screen, sizing, memories, history, chat shortcuts, journal. SOX dropped from compact bar to keep gold visible in Chinese mode.
-
-**v2.5.2** (2026-04-15) — System prompt overhaul with precise thesis context, geopolitical standing context, tool-use synthesis instruction. Fixed token counting in Gemini/Claude re-call loops (was showing initial turn tokens, not final response). Fixed Gemini thinking leak in tool re-call. Column spacing tuned for thesis view.
-
-**v2.5.1** (2026-04-15) — Smart alerts (price, RSI, SMA crossover, volume spike, margin cushion). NLV timeline with 90-day ASCII chart. Earnings surprise tracker. Morning briefing with AI synthesis. Position sizing what-if. Market context (3 rows: indices, commodities, yields). JsonStore memoization (~25x faster reads). 3 new AI tools. FX pairs in consolidated view.
-
-**v2.4.2** (2026-04-13) — Grouped tool indicators, compact tool results, dead code removal.
-
-**v2.4.1** (2026-04-13) — Pricing display, cost basis columns, tool UX improvements, SIGINT fix.
-
-**v2.4** (2026-04-13) — AI tool use (12 functions across 3 providers), consolidated IBKR view, `/detail` command, historical trades.
-
-**v2.3** (2026-04-09) — IBKR refactor, NaN handling, consistent box widths, screening view.
-
-**v2.2** (2026-04-07) — IBKR overhaul with risk sidebar, slash commands for portfolio data, screening view, README refresh.
-
-**v2.1** (2026-04-02) — Compact mode with sparklines/earnings/gold/breadth. Watchlist groups. Memory edit via AI. Margin dashboard. Trade grouping. Multi-account IBKR. Commodities screen. NYSE holiday detection. Chat help menu. Resume command. Image input (Ctrl+P). Prompt caching on Anthropic. GPT native search. Gemini code execution. History/memory compaction.
-
-**v2.0.5** (2026-03-29) — Chat memory tools, multi-line paste, history ranges, system prompt update.
-
-**v2.0.4** (2026-03-29) — Memory/history consolidation, history compact, Haiku/Opus pricing fix.
-
-**v2.0.3** (2026-03-27) — IBKR formatting, compact mode, AI screen context injection.
-
-**v2.0.2** (2026-03-26) — IBKR formatting fixes, what-if sell, history display improvements.
-
-**v2.0.1** (2026-03-26) — Options chain, correlation matrix, watchlist groups, live alerts, earnings upgrade. Tavily search, GPT search, Gemini code execution. Token/cost tracker.
-
-**v2.0** (2026-03-25) — Textual rewrite from scratch. 368 tests. Thesis-driven portfolio view, heatmap, technicals, intraday, lookup, earnings, economic calendar screens. Status bar with scrolling indices. Full i18n (EN/ZH, ~250 keys). Shared memory system. Multi-model AI chat (7 models, 3 providers). Streaming with paragraph-level flush. IBKR multi-account integration via MCP.
-
-**v1.5** (2026-03-17) — Multi-model AI chat with 7 providers. Streaming paragraph-level flush. Shared memory system across all models. i18n with ~250 translation keys (EN/ZH).
-
-**v1.4** (2026-03-15) — IBKR multi-account integration via MCP streamable HTTP. Economic calendar (FOMC, CPI, NFP, GDP, PCE). Price alerts and watchlist persistence.
-
-**v1.3** (2026-03-11) — Earnings impact analysis and valuation screen. Sector heatmap and insider tracking. Intraday price action with VWAP.
-
-**v1.2** (2026-03-07) — Technicals (MACD, RSI, Bollinger Bands, ATR). Charts and side-by-side comparison. Command bar with ~40 aliases.
-
-**v1.1** (2026-03-03) — Scrolling ticker tape widget. Status bar with market state and indices. Sidebar with sparklines and pulse metrics. Sectors, earnings, news screens.
-
-**v1.0** (2026-02-25) — Thesis dashboard with 52w range bars. Stock lookup with key stats. Market overview screen.
-
-**v0.1** (2026-02-19) — Project scaffolding. Textual app shell. yfinance data layer with TTL caching. Rich markup formatters.
-</details>
-
-### Local validation
-
-Run validation from an unlocked checkout before merging:
+## Tests
 
 ```sh
 venv/bin/python scripts/validate_offline.py --self-check
@@ -540,21 +110,11 @@ venv/bin/python scripts/validate_offline.py -- tests -q
 venv/bin/python -m pip wheel --no-deps --wheel-dir dist .
 ```
 
-The offline launcher strips inherited credentials and service configuration,
-disables dotenv, redirects Python home resolution and temporary files, and blocks
-network access before test collection. It excludes Git/decryption state from
-test reads and fails on attempted writes outside the disposable artifact.
-Its preflight uses temporary canaries and imports no application code.
+The launcher strips credentials, disables dotenv, redirects home and temp
+directories and blocks network before collection. Run it from an unlocked
+checkout; a worktree may fail checkout while encrypted files cannot be decoded.
+Do not copy decryption keys to other hosts.
 
-Verify the built wheel in a separate virtual environment, including runtime
-imports and the packaged stylesheet. Source decryption stays on trusted local
-machines; this repository does not require a GitHub Actions decryption secret.
-Existing local PII and secret guards remain mandatory.
+## License
 
-### Encrypted checkout
-
-This repository uses git-crypt. Use an isolated task clone with a dedicated
-branch and unlock it with the existing trusted-local key in place. A new
-worktree may fail checkout when encrypted files cannot be decoded. Do not
-copy keys to other hosts or provision hosted decryption. Preserve shared
-checkouts and run the offline launcher before validation.
+See `LICENSE`.
