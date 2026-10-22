@@ -111,6 +111,7 @@ py-modules = [
     "shadows",
     "signals",
     "thesis_data",
+    "thesis_exposure",
     "timetravel",
     "vecgrep_client",
     "wire",
